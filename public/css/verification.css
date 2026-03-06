@@ -1,0 +1,538 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Amiri", "Arial", serif;
+    background: #f8f9fa;
+    min-height: 100vh;
+}
+
+/* Top Bar */
+.top-bar {
+    background: #1a472a;
+    color: white;
+    padding: 8px 0;
+    text-align: center;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Header */
+.header {
+    background: white;
+    padding: 40px 60px;
+    border-bottom: 4px solid #1a472a;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.university-info {
+    flex: 1;
+    text-align: center;
+}
+
+.university-name-ar {
+    color: #1a472a;
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+.university-name-en {
+    color: #666;
+    font-size: 20px;
+    font-weight: 400;
+    margin-bottom: 15px;
+    letter-spacing: 2px;
+}
+
+.system-title {
+    color: #bba97b;
+    font-size: 16px;
+    font-weight: 500;
+    padding-top: 15px;
+    border-top: 2px solid #f0f0f0;
+    margin-top: 15px;
+}
+
+.logo-container {
+    flex: 0 0 100px;
+}
+
+.logo-placeholder img {
+    width: 150px;
+    height: 150px;
+    border: 4px solid #1a472a;
+    border-radius: 50%;
+
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(26, 71, 42, 0.15);
+}
+
+.logo2-placeholder img {
+    width: 150px;
+    height: 120px;
+}
+
+.flag-container {
+    flex: 0 0 100px;
+}
+
+.syrian-flag {
+    width: 80px;
+    height: 53px;
+    border: 2px solid #ddd;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.flag-stripe {
+    width: 100%;
+    height: 33.33%;
+}
+
+.flag-red {
+    background: #ce1126;
+}
+
+.flag-white {
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flag-black {
+    background: #000000;
+}
+
+.flag-stars {
+    color: #007a3d;
+    font-size: 16px;
+    letter-spacing: 3px;
+}
+
+/* Main Content */
+.main-content {
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* Search Section */
+.search-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 50px 60px;
+    margin-bottom: 30px;
+    border-top: 5px solid #1a472a;
+}
+
+.search-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.search-header h2 {
+    color: #1a472a;
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.search-header p {
+    color: #666;
+    font-size: 15px;
+}
+
+.search-form {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-label {
+    display: block;
+    color: #333;
+    margin-bottom: 12px;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 18px 20px;
+    border: 2px solid #e5e5e5;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: all 0.3s;
+    background: #fafafa;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #1a472a;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(26, 71, 42, 0.08);
+}
+
+.btn-submit {
+    width: 100%;
+    background: #1a472a;
+    color: white;
+    border: none;
+    padding: 18px;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    letter-spacing: 1px;
+}
+
+.btn-submit:hover {
+    background: #0f2818;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(26, 71, 42, 0.25);
+}
+
+.btn-submit:active {
+    transform: translateY(0);
+}
+
+/* Loading */
+.loading-state {
+    text-align: center;
+    padding: 60px 20px;
+    display: none;
+}
+
+.loading-state.active {
+    display: block;
+}
+
+.spinner {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #1a472a;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 25px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-text {
+    color: #666;
+    font-size: 16px;
+}
+
+/* Result Section */
+.result-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 50px 60px;
+    display: none;
+    border-top: 5px solid #1a472a;
+}
+
+.result-card.show {
+    display: block;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Status Badge */
+.status-header {
+    text-align: center;
+    margin-bottom: 45px;
+    padding-bottom: 30px;
+    border-bottom: 2px solid #f5f5f5;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 35px;
+    border-radius: 50px;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.status-valid {
+    background: rgba(26, 71, 42, 0.08);
+    color: #1a472a;
+    border: 3px solid #1a472a;
+}
+
+.status-invalid {
+    background: rgba(220, 53, 69, 0.08);
+    color: #dc3545;
+    border: 3px solid #dc3545;
+}
+
+.status-icon {
+    font-size: 26px;
+}
+
+/* Certificate Details */
+.details-section {
+    margin-bottom: 40px;
+}
+
+.section-title {
+    color: #1a472a;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 25px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid #bba97b;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-icon {
+    font-size: 24px;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.detail-item {
+    background: #fafafa;
+    padding: 20px;
+    border-radius: 8px;
+    border-right: 4px solid #bba97b;
+}
+
+.detail-label {
+    color: #666;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-value {
+    color: #1a472a;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+/* Signatures */
+.signatures-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.signature-card {
+    background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+    padding: 25px;
+    border-radius: 8px;
+    text-align: center;
+    border: 2px solid #e5e5e5;
+    position: relative;
+}
+
+.signature-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 4px;
+    background: #bba97b;
+    border-radius: 8px 8px 0 0;
+}
+
+.signature-icon {
+    font-size: 32px;
+    margin-bottom: 15px;
+}
+
+.signature-role {
+    color: #1a472a;
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.signature-date {
+    color: #666;
+    font-size: 13px;
+}
+
+/* Blockchain Info */
+.blockchain-section {
+    background: linear-gradient(135deg, rgba(26, 71, 42, 0.03) 0%, rgba(187, 169, 123, 0.03) 100%);
+    padding: 35px;
+    border-radius: 8px;
+    border: 2px solid #e5e5e5;
+    margin-top: 40px;
+}
+
+.blockchain-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 25px;
+}
+
+.blockchain-title {
+    color: #1a472a;
+    font-size: 20px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.blockchain-badge {
+    background: #1a472a;
+    color: white;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.blockchain-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.blockchain-item {
+    background: white;
+    padding: 18px;
+    border-radius: 6px;
+    border-right: 3px solid #bba97b;
+}
+
+.blockchain-label {
+    color: #666;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.blockchain-value {
+    color: #1a472a;
+    font-size: 14px;
+    font-weight: 600;
+    word-break: break-all;
+    font-family: monospace;
+}
+
+/* Footer */
+.footer {
+    background: #1a472a;
+    color: white;
+    text-align: center;
+    padding: 30px 20px;
+    margin-top: 60px;
+}
+
+.footer-text {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+/* Responsive */
+@media (max-width: 968px) {
+    .header-content {
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    .logo-container,
+    .flag-container {
+        flex: none;
+    }
+
+    .university-name-ar {
+        font-size: 28px;
+    }
+
+    .search-card,
+    .result-card {
+        padding: 35px 25px;
+    }
+
+    .details-grid,
+    .signatures-grid,
+    .blockchain-details {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Error State */
+.error-state {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.error-icon {
+    font-size: 60px;
+    color: #dc3545;
+    margin-bottom: 20px;
+}
+
+.error-message {
+    color: #666;
+    font-size: 16px;
+    line-height: 1.6;
+}

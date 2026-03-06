@@ -1,0 +1,532 @@
+       * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Amiri', 'Arial', serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            background: #1a472a;
+            color: white;
+            padding: 8px 0;
+            text-align: center;
+            font-size: 16px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            padding: 40px 60px;
+            border-bottom: 4px solid #1a472a;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .university-info {
+            flex: 1;
+            text-align: center;
+        }
+
+        .university-name-ar {
+            color: #1a472a;
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .university-name-en {
+            color: #666;
+            font-size: 20px;
+            font-weight: 400;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+
+        .system-title {
+            color: #bba97b;
+            font-size: 16px;
+            font-weight: 500;
+            padding-top: 15px;
+            border-top: 2px solid #f0f0f0;
+            margin-top: 15px;
+        }
+
+        .logo-placeholder img {
+            width: 150px;
+            height: 150px;
+            border: 4px solid #1a472a;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(26, 71, 42, 0.15);
+        }
+
+        .logo2-placeholder img {
+            width: 150px;
+            height: 120px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        /* Statistics */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 18px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            text-align: center;
+            border-top: 3px solid #1a472a;
+        }
+
+        .stat-value {
+            font-size: 2.2em;
+            font-weight: bold;
+            color: #1a472a;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.85em;
+            margin-top: 3px;
+        }
+
+        /* Top Panels */
+        .top-panels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: white;
+            padding: 18px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .panel-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #1a472a;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #1a472a;
+        }
+
+        .cert-list {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .cert-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #f9f9f9;
+            border-right: 3px solid #bba97b;
+            border-radius: 4px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cert-item:hover {
+            background: #f0f0f0;
+            transform: translateX(-3px);
+        }
+
+        .cert-name {
+            font-weight: 600;
+            color: #1a472a;
+        }
+
+        .cert-info {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 3px;
+        }
+
+        /* Blockchain Section */
+        .blockchain-section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        .blockchain-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #1a472a;
+            margin-bottom: 30px;
+            text-align: center;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #1a472a;
+        }
+
+        /* Chain Canvas */
+        .chain-canvas {
+            position: relative;
+            padding: 40px 20px;
+            min-height: 300px;
+        }
+
+        svg.chain-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .blocks-container {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 80px;
+        }
+
+        /* Block - Compact Design */
+        .block {
+            width: 180px;
+            background: white;
+            border: 3px solid #1a472a;
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .block:hover {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(26, 71, 42, 0.3);
+            border-color: #bba97b;
+        }
+
+        .block.genesis {
+            background: linear-gradient(135deg, #1a472a 0%, #0f2818 100%);
+            border-color: #bba97b;
+        }
+
+        .block-mini-header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .block-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #1a472a;
+        }
+
+        .block.genesis .block-number {
+            color: #bba97b;
+        }
+
+        .block-mini-info {
+            text-align: center;
+            padding: 8px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            font-size: 0.8em;
+            margin-bottom: 8px;
+        }
+
+        .block.genesis .block-mini-info {
+            background: rgba(255,255,255,0.15);
+            color: white;
+        }
+
+        .block-hash-preview {
+            background: #f0f0f0;
+            padding: 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.65em;
+            text-align: center;
+            color: #666;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .block.genesis .block-hash-preview {
+            background: rgba(0,0,0,0.3);
+            color: #bba97b;
+        }
+
+        .click-hint {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7em;
+            color: #bba97b;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .block:hover .click-hint {
+            opacity: 1;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s ease;
+            position: relative;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #1a472a 0%, #0f2818 100%);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 15px 15px 0 0;
+            position: relative;
+        }
+
+        .modal-header.genesis {
+            background: linear-gradient(135deg, #bba97b 0%, #d4c5a0 100%);
+            color: #1a472a;
+        }
+
+        .modal-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .modal-subtitle {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: 35px;
+            height: 35px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .modal-section {
+            margin-bottom: 25px;
+        }
+
+        .modal-section-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #1a472a;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .info-box {
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border-right: 3px solid #bba97b;
+        }
+
+        .info-box-label {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .info-box-value {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #1a472a;
+        }
+
+        .cert-in-modal {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            border-right: 3px solid #1a472a;
+        }
+
+        .cert-in-modal strong {
+            color: #1a472a;
+        }
+
+        .hash-box-modal {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            margin-bottom: 15px;
+        }
+
+        .hash-value-modal {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            word-break: break-all;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .hash-zeros-modal {
+            color: #1a472a;
+            font-weight: bold;
+        }
+
+        /* Footer */
+        .footer {
+            background: #1a472a;
+            color: white;
+            text-align: center;
+            padding: 30px 20px;
+            margin-top: 60px;
+        }
+
+        .footer-text {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #bba97b;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #1a472a;
+        }
+
+        @media (max-width: 1024px) {
+            .top-panels {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .blocks-container {
+                flex-direction: column;
+                gap: 40px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 25px;
+            }
+
+            .university-name-ar {
+                font-size: 28px;
+            }
+        }
