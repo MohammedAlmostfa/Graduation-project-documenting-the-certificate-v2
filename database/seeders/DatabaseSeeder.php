@@ -20,7 +20,7 @@ $this->call([
     CollegesAndDepartmentsSeeder::class,
 
     RoleAndPermissionSeeder::class,
-       UserSeeder::class,]
+       ]
 );
 
 
