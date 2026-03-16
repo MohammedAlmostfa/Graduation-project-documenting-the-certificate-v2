@@ -5,40 +5,33 @@ document.getElementById('verifyForm').addEventListener('submit', async (e) => {
     const loadingState = document.getElementById('loadingState');
     const resultCard = document.getElementById('resultCard');
 
-    // التحقق من إدخال رقم الشهادة
     if (!certNumber) {
         alert('يرجى إدخال رقم الشهادة');
         return;
     }
 
-    // Show loading
     loadingState.classList.add('active');
     resultCard.classList.remove('show');
 
     try {
-        // طلب API حقيقي باستخدام fetch
         const apiUrl = `http://localhost:3000/api/certificates/${encodeURIComponent(certNumber)}/validate`;
 
         const response = await fetch(apiUrl, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            }
+            headers: { 'Content-Type': 'application/json' }
         });
-
-        console.log('response', response.data);
 
         if (!response.ok) {
             throw new Error(`فشل في الاتصال بالخادم: ${response.status}`);
         }
 
-        let data = await response.json();
-        data = data.data;
+        const json = await response.json();
+        const data = json.data; // { status, message, certificate? }
+
         loadingState.classList.remove('active');
         console.log('data', data);
 
-        // حفظ البيانات في localStorage لاستخدامها في صفحة الشهادة
-        if (data.valid || data.isValid) {
+        if (data.status === 'VALID') {
             localStorage.setItem('certificateData', JSON.stringify(data));
         }
 
@@ -48,8 +41,7 @@ document.getElementById('verifyForm').addEventListener('submit', async (e) => {
         console.error('Error:', error);
         loadingState.classList.remove('active');
 
-        const resultContent = document.getElementById('resultContent');
-        resultContent.innerHTML = `
+        document.getElementById('resultContent').innerHTML = `
             <div class="status-header">
                 <div class="status-badge status-invalid">
                     <span class="status-icon">⚠️</span>
@@ -68,13 +60,17 @@ document.getElementById('verifyForm').addEventListener('submit', async (e) => {
     }
 });
 
+// ============================================================
+// displayResult — يتعامل مع هيكل { status, message, certificate }
+// ============================================================
 function displayResult(data, certNumber) {
-    const resultCard = document.getElementById('resultCard');
+    const resultCard    = document.getElementById('resultCard');
     const resultContent = document.getElementById('resultContent');
 
-    // تحقق من هيكل الاستجابة المتوقع
-    if (data.valid || data.isValid) {
-        const certData = data.certificate || data;
+    // ✅ VALID — شهادة صحيحة ومتحقق منها
+    if (data.status === 'VALID') {
+        const certData = data.certificate;
+        const student  = certData.student;
 
         resultContent.innerHTML = `
             <div class="status-header">
@@ -92,19 +88,19 @@ function displayResult(data, certNumber) {
                 <div class="details-grid">
                     <div class="detail-item">
                         <div class="detail-label">اسم الطالب</div>
-                        <div class="detail-value">${certData.student?.studentName || certData.studentName || 'غير متوفر'}</div>
+                        <div class="detail-value">${student?.studentName || 'غير متوفر'}</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">الرقم الجامعي</div>
-                        <div class="detail-value">${certData.student?.studentId || certData.studentId || 'غير متوفر'}</div>
+                        <div class="detail-value">${student?.studentId || 'غير متوفر'}</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">البريد الإلكتروني</div>
-                        <div class="detail-value">${certData.student?.studentEmail || certData.studentEmail || 'غير متوفر'}</div>
+                        <div class="detail-value">${student?.studentEmail || 'غير متوفر'}</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">الجنسية</div>
-                        <div class="detail-value">${certData.student?.nationality || certData.nationality || 'غير متوفر'}</div>
+                        <div class="detail-value">${student?.nationality || 'غير متوفر'}</div>
                     </div>
                 </div>
             </div>
@@ -117,40 +113,40 @@ function displayResult(data, certNumber) {
                 <div class="details-grid">
                     <div class="detail-item">
                         <div class="detail-label">رقم الشهادة</div>
-                        <div class="detail-value">${certData.certificateNumber || data.certificateNumber || certNumber}</div>
+                        <div class="detail-value">${certData.certificateNumber || certNumber}</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">نوع الشهادة</div>
-                        <div class="detail-value">${certData.student?.certificateType || certData.certificateType || 'غير متوفر'}</div>
+                        <div class="detail-value">${student?.certificateType || 'غير متوفر'}</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">التخصص</div>
-                        <div class="detail-value">${certData.student?.major || certData.major || 'غير متوفر'}</div>
+                        <div class="detail-value">${student?.major || 'غير متوفر'}</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">الكلية</div>
-                        <div class="detail-value">${certData.student?.faculty || certData.faculty || 'غير متوفر'}</div>
+                        <div class="detail-value">${student?.faculty || 'غير متوفر'}</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">تاريخ التخرج</div>
-                        <div class="detail-value">${formatDate(certData.student?.graduationDate || certData.graduationDate)}</div>
+                        <div class="detail-value">${formatDate(student?.graduationDate)}</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">دورة التخرج</div>
-                        <div class="detail-value">${certData.student?.graduationCycle || certData.graduationCycle || 'غير متوفر'}</div>
+                        <div class="detail-value">${student?.graduationCycle || 'غير متوفر'}</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">المعدل التراكمي</div>
-                        <div class="detail-value">${certData.student?.gpa || certData.gpa || 'غير متوفر'} من 4.00</div>
+                        <div class="detail-value">${student?.gpa || 'غير متوفر'} من 4.00</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">التقدير</div>
-                        <div class="detail-value">${certData.student?.honors || certData.honors || 'غير متوفر'}</div>
+                        <div class="detail-value">${student?.honors || 'غير متوفر'}</div>
                     </div>
                 </div>
             </div>
 
-            ${(certData.signatures && certData.signatures.length > 0) ? `
+            ${certData.signatures?.length > 0 ? `
                 <div class="details-section">
                     <h3 class="section-title">
                         <span class="section-icon">✍️</span>
@@ -169,11 +165,10 @@ function displayResult(data, certNumber) {
             ` : ''}
 
             <button onclick="showCertificate()" style="
-
                 margin: 0px auto;
                 margin-top: 20px;
                 padding: 12px 30px;
-                 background:#06332e;
+                background: #06332e;
                 color: white;
                 border: none;
                 border-radius: 8px;
@@ -185,82 +180,32 @@ function displayResult(data, certNumber) {
                 عرض الشهادة
             </button>
         `;
-    }
-else if (data.status === 'قيد المراجعة') {
-        resultContent.innerHTML = `
-            <div class="status-header">
-                <div class="status-badge status-invalid">
-                    <span class="status-icon">⏳</span>
-                    <span>في انتظار توقيع عميد الكلية</span>
-                </div>
-            </div>
-            <div class="error-state">
-                <p class="error-message">
-                    الشهادة بحاجة إلى توقيع عميد الكلية
-                </p>
-            </div>
-        `;
-    }
-    else if (data.status === 'موقعة من العميد') {
-        resultContent.innerHTML = `
-            <div class="status-header">
-                <div class="status-badge status-invalid">
-                    <span class="status-icon">⏳</span>
-                    <span>في انتظار توقيع رئيس الجامعة</span>
-                </div>
-            </div>
-            <div class="error-state">
-                <p class="error-message">
-                    الشهادة بحاجة إلى توقيع رئيس الجامعة
-                </p>
-            </div>
-        `;
-    }
-    else if (data.status === 'موقعة من الرئيس') {
-        resultContent.innerHTML = `
-            <div class="status-header">
-                <div class="status-badge status-invalid">
-                    <span class="status-icon">⛏️</span>
-                    <span>في انتظار التعدين</span>
-                </div>
-            </div>
-            <div class="error-state">
-                <p class="error-message">
-                    الشهادة بحاجة إلى التعدين على البلوكشين
-                </p>
-            </div>
-        `;
-    }
-    else {
+
+    // ❌ INVALID — شهادة غير متحقق منها، نعرض رسالة الـ API مباشرة
+    } else {
         resultContent.innerHTML = `
             <div class="status-header">
                 <div class="status-badge status-invalid">
                     <span class="status-icon">✗</span>
-                    <span>شهادة غير موجودة</span>
+                    <span>غير متحقق منها</span>
                 </div>
             </div>
             <div class="error-state">
-
-                <p class="error-message">
-                    ${data.message || 'لم يتم العثور على شهادة بهذا الرقم في قاعدة البيانات.'}<br>
-                    يرجى التأكد من رقم الشهادة والمحاولة مرة أخرى.
-                </p>
+                <p class="error-message">${data.message || 'الشهادة غير صالحة أو غير مكتملة.'}</p>
             </div>
         `;
     }
 
     resultCard.classList.add('show');
-    resultCard.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-    });
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// دالة لعرض الشهادة مع إرسال البيانات
+// ============================================================
+// Helpers
+// ============================================================
 function showCertificate() {
     const certData = localStorage.getItem('certificateData');
     if (certData) {
-        // فتح صفحة الشهادة
         window.location.href = 'http://127.0.0.1:8000/certificate';
     } else {
         alert('لم يتم العثور على بيانات الشهادة');
@@ -269,60 +214,34 @@ function showCertificate() {
 
 function formatDate(dateString) {
     if (!dateString) return 'غير متوفر';
-
     try {
-        const date = new Date(dateString);
-        const options = {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        };
-        return date.toLocaleDateString('ar-SY', options);
-    } catch (error) {
+        return new Date(dateString).toLocaleDateString('ar-SY', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+    } catch {
         return dateString;
     }
 }
 
 function getRoleLabel(role) {
     const labels = {
-        'officer': 'موظف شؤون الطلاب',
-        'dean': 'عميد الكلية',
-        'president': 'رئيس الجامعة',
-        'registrar': 'مسجل عام',
-        'director': 'مدير الشؤون الأكاديمية'
+        'officer':    'موظف شؤون الطلاب',
+        'dean':       'عميد الكلية',
+        'president':  'رئيس الجامعة',
+        'registrar':  'مسجل عام',
+        'director':   'مدير الشؤون الأكاديمية'
     };
     return labels[role] || role;
 }
 
-// إضافة دالة لنسخ رقم المعاملة
 function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        alert('تم نسخ رقم المعاملة إلى الحافظة');
-    }).catch(err => {
-        console.error('فشل في النسخ: ', err);
-    });
+    navigator.clipboard.writeText(text)
+        .then(() => alert('تم نسخ رقم المعاملة إلى الحافظة'))
+        .catch(err => console.error('فشل في النسخ: ', err));
 }
 
-// إضافة مستمع للأحداث للعناصر الديناميكية
-document.addEventListener('click', function (e) {
+document.addEventListener('click', function(e) {
     if (e.target.classList.contains('blockchain-value')) {
         copyToClipboard(e.target.textContent);
     }
 });
-
-// دالة لاختبار الاتصال بالـ API (اختياري)
-async function testConnection() {
-    try {
-        const response = await fetch('http://localhost:3000/api/health', {
-            method: 'GET'
-        });
-
-        if (response.ok) {
-            console.log('✅ API متصل ويعمل');
-        } else {
-            console.warn('⚠️ API متصل ولكن هناك مشكلة');
-        }
-    } catch (error) {
-        console.error('❌ لا يمكن الاتصال بالـ API:', error);
-    }
-}

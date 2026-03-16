@@ -29,12 +29,11 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
-  ->withMiddleware(function (Middleware $middleware): void {
-    $middleware->alias([
-        'auth' => \App\Http\Middleware\Authenticate::class,
-    ]);
-})
-
+    ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias([
+            'auth' => \App\Http\Middleware\Authenticate::class,
+        ]);
+    })
     ->withExceptions(function (Exceptions $exceptions): void {
 
         // 1. تجاهل استثناءات معينة عن الإبلاغ
@@ -47,18 +46,6 @@ return Application::configure(basePath: dirname(__DIR__))
             TokenMismatchException::class,
         ]);
 
-        // 2. إضافة سياق عام لجميع logs الأخطاء
-        // $exceptions->context(function () {
-        //     return [
-        //         'environment' => app()->environment(),
-        //         'timestamp' => now()->toISOString(),
-        //         'url' => request()?->fullUrl() ?? 'unknown',
-        //         'ip' => request()?->ip() ?? 'unknown',
-        //         'user_agent' => request()?->userAgent() ?? 'unknown',
-        //         'user_id' => auth()->id() ?? 'guest',
-        //     ];
-        // });
-
         // 3. منع تكرار الإبلاغ عن نفس الاستثناء
         $exceptions->dontReportDuplicates();
 
@@ -70,7 +57,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // 5. المعالجة العامة لجميع الاستثناءات - الإبلاغ
         $exceptions->report(function (Throwable $e) {
-            // تسجيل إضافي للاستثناءات الحرجة
             if ($e instanceof \PDOException || $e instanceof QueryException) {
                 Log::channel('database')->critical('Database Error: ' . $e->getMessage(), [
                     'exception' => $e,
@@ -78,16 +64,13 @@ return Application::configure(basePath: dirname(__DIR__))
                 ]);
             }
 
-            // إرسال إلى خدمة خارجية في production
             if (app()->environment('production') && !$e instanceof ValidationException) {
-                // هنا يمكنك إضافة integration مع Sentry, Bugsnag, etc.
                 // \Sentry\captureException($e);
             }
         });
 
         // 6. المعالجة العامة لجميع الاستثناءات - العرض
         $exceptions->render(function (Throwable $e, Request $request) {
-            // سجل التفاصيل لل debugging في البيئة المحلية
             if (app()->environment('local')) {
                 Log::debug('Exception occurred', [
                     'exception' => $e->getMessage(),
@@ -97,7 +80,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 ]);
             }
 
-            // دع Laravel يتعامل مع الباقي حسب الإعدادات الأخرى
             return null;
         });
 
@@ -112,13 +94,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 404);
             }
 
-            return response()->view('errors.404', [
-                'message' => 'الصفحة التي تبحث عنها غير موجودة',
-                'title' => 'الصفحة غير موجودة'
-            ], 404);
+            return null;
         });
 
-        // 8. معالجة أخطاء المصادقة
+
         $exceptions->render(function (AuthenticationException $e, Request $request) {
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
@@ -132,7 +111,6 @@ return Application::configure(basePath: dirname(__DIR__))
             return redirect()->guest(route('login'))->with('error', 'يجب تسجيل الدخول أولاً');
         });
 
-        // 9. معالجة أخطاء الصلاحيات
         $exceptions->render(function (AuthorizationException $e, Request $request) {
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
@@ -143,13 +121,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 403);
             }
 
-            return response()->view('errors.403', [
-                'message' => 'ليس لديك صلاحية للوصول إلى هذه الصفحة',
-                'title' => 'غير مسموح'
-            ], 403);
+            return null;
         });
 
-        // 10. معالجة أخطاء التحقق
         $exceptions->render(function (ValidationException $e, Request $request) {
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
@@ -175,10 +149,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 405);
             }
 
-            return response()->view('errors.405', [
-                'message' => 'طريقة الطلب غير مسموحة',
-                'title' => 'طريقة غير مسموحة'
-            ], 405);
+            return null;
         });
 
         // 12. معالجة أخطاء CSRF Token
@@ -212,12 +183,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 500);
             }
 
-            return response()->view('errors.500', [
-                'message' => $message,
-                'title' => 'خطأ في الخادم'
-            ], 500);
+            return null;
         });
 
+        // 14. تحديد متى يُرجع JSON
         $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e) {
             return $request->expectsJson() ||
                 $request->is('api/*') ||
@@ -227,31 +196,25 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // 15. الحد من الإبلاغ عن الاستثناءات
         $exceptions->throttle(function (Throwable $e) {
-            // استثناءات قاعدة البيانات - 100 في الدقيقة
             if ($e instanceof QueryException) {
                 return Limit::perMinute(100)->by('database_errors');
             }
 
-            // استثناءات 404 - عينة عشوائية 5%
             if ($e instanceof NotFoundHttpException) {
                 return Lottery::odds(5, 100);
             }
 
-            // الاستثناءات العامة - 500 في الساعة
             return Limit::perHour(500)->by('general_errors');
         });
 
         // 16. تخصيص response العام لجميع الأخطاء
         $exceptions->respond(function (SymfonyResponse $response, Throwable $e) {
-            // إضافة headers أمان إضافية
             $response->headers->set('X-Content-Type-Options', 'nosniff');
             $response->headers->set('X-Frame-Options', 'DENY');
             $response->headers->set('X-XSS-Protection', '1; mode=block');
 
-            // تخصيص رسالة الخطأ العامة
             if ($response->getStatusCode() >= 500) {
                 if (app()->environment('production')) {
-                    // في production، لا تعرض تفاصيل الخطأ
                     Log::error('Server Error', [
                         'exception' => $e->getMessage(),
                         'url' => request()->fullUrl(),
@@ -262,34 +225,5 @@ return Application::configure(basePath: dirname(__DIR__))
 
             return $response;
         });
-
-
-$exceptions->render(function (Throwable $e, Request $request) {
-    Log::error('Unhandled Exception', [
-        'exception' => $e->getMessage(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine(),
-        'url' => request()->fullUrl(),
-        'ip' => request()->ip()
-    ]);
-
-    $message = 'حدث خطأ غير متوقع أثناء معالجة الطلب';
-
-    if (app()->environment('local')) {
-        $message = $e->getMessage();
-    }
-
-    if ($request->expectsJson() || $request->is('api/*')) {
-        return response()->json([
-            'success' => 'error',
-            'message' => $message,
-            'error_code' => 'UNEXPECTED_ERROR',
-            'status' => 500
-        ], 500);
-    }
-
-    // بدل View، عرض Flutter Web مباشرة
-    return response()->file(public_path('index.html'));
-});
 
     })->create();
