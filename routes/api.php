@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CertificateSystem\BlockchainController;
 use App\Http\Controllers\CertificateSystem\CertificateController;
+use App\Http\Controllers\StatisticsController;
 
 Route::middleware(['auth:api'])->group(function () {
     Route::get('/test-auth', function () {
@@ -28,6 +29,8 @@ Route::post('/logout', [AuthController::class, 'logout']);
 Route::post('certificates/{certificate_id}}/validate', [CertificateController::class, 'verifyCertificate']);
 
 Route::middleware(['auth:api'])->group(function () {
+
+Route::get('/stastistics', [StatisticsController::class, 'index']);
     Route::apiResource('users', UserController::class);
 
     Route::post('blockchain/mine', [BlockchainController::class, 'mineTransactions']);

@@ -3,12 +3,10 @@
 use Psr\Log\LogLevel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Lottery;
-use App\Exceptions\CustomException;
 use function Laravel\Prompts\error;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Foundation\Application;
 use Illuminate\Database\QueryException;
-use App\Http\Middleware\CheckPermission;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Session\TokenMismatchException;
