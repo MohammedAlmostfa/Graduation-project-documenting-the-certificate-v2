@@ -1,4 +1,3 @@
-
 import { mysqlDB } from '../storage/mysqlDB.js';
 import { logger } from '../utils/logger.js';
 import { BaseRepository } from './baseRepository.js';
@@ -18,6 +17,7 @@ class CertificateRepository extends BaseRepository {
             return null;
         }
     }
+
     /**
      * @param {object} db - Database interface (default: mysqlDB)
      */
@@ -47,15 +47,6 @@ class CertificateRepository extends BaseRepository {
             }
             throw error;
         }
-    }
-
-    /**
-     * Get all certificate keys.
-     * (Legacy method – returns empty list.)
-     */
-    async getAllKeys() {
-        logger.info('certificateRepository.getAllKeys: key_value_store removed, returning empty list');
-        return [];
     }
 
     /**

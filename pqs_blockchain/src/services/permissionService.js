@@ -30,40 +30,6 @@ export class PermissionService {
 
     return canSign;
   }
-
-  /** Ensure user is an admin; throw error otherwise. */
-  requireAdmin(user) {
-    if (!user) {
-      throw new ForbiddenError('User not authenticated');
-    }
-
-    if (user.role !== 'admin') {
-      logger.warn(`Admin operation denied: User ${user.id} (${user.role}) is not admin`);
-      throw new ForbiddenError('This operation requires administrator privileges');
-    }
-
-    return true;
-  }
-
-  /** Get numeric permission level for a role. */
-  getRoleLevel(role) {
-    return this.roleHierarchy[role] || 0;
-  }
-
-  /** Get all roles sorted by permission level (ascending). */
-  getRolesSortedByLevel() {
-    return Object.entries(this.roleHierarchy)
-      .sort((a, b) => a[1] - b[1])
-      .map(([role]) => role);
-  }
-
-  /** Assert a condition is true, throw ForbiddenError if not. */
-  assert(condition, message = 'Permission denied') {
-    if (!condition) {
-      logger.warn(`Assertion failed: ${message}`);
-      throw new ForbiddenError(message);
-    }
-  }
 }
 
 // Export singleton instance

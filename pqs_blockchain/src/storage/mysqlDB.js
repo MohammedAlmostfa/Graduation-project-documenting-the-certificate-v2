@@ -1,7 +1,5 @@
-
 import * as mysql from 'mysql2/promise';
 import { logger } from '../utils/logger.js';
-import { TABLE_SCHEMAS } from './schema.js';
 import { CertificateQueries } from './queries/CertificateQueries.js';
 import { KeyQueries } from './queries/KeyQueries.js';
 import { ChainQueries } from './queries/ChainQueries.js';

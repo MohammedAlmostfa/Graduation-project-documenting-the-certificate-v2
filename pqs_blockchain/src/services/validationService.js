@@ -52,13 +52,6 @@ export class ValidationService {
         };
     }
 
-    /** Validate graduation cycle (Spring, Fall, Summer). */
-    validateGraduationCycle(cycle) {
-        if (!cycle) return true;
-        const validCycles = ['spring', 'fall', 'summer'];
-        return validCycles.includes(String(cycle).toLowerCase());
-    }
-
     /** Validate user data fields. */
     validateUserData(userData) {
         const errors = [];
@@ -118,29 +111,6 @@ export class ValidationService {
         if (!dateString) return false;
         const date = new Date(dateString);
         return !isNaN(date.getTime());
-    }
-
-    /** Validate certificate request body. */
-    validateCertificateRequest(body) {
-        return this.validateCertificateData(body);
-    }
-
-    /** Validate signature operation data. */
-    validateSignatureOperation(signatureOpData) {
-        const errors = [];
-
-        if (!signatureOpData.role || !['officer', 'dean', 'president'].includes(signatureOpData.role)) {
-            errors.push('Invalid role in signature operation');
-        }
-
-        if (!signatureOpData.certificateId || signatureOpData.certificateId.toString().trim() === '') {
-            errors.push('Certificate ID is required');
-        }
-
-        return {
-            isValid: errors.length === 0,
-            errors
-        };
     }
 }
 

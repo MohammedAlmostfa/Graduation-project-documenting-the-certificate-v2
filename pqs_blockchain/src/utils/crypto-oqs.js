@@ -192,24 +192,7 @@ export class OQSCrypto {
     return stringifySorted(data);
   }
 
-  /**
-   * Validate if a public key is usable by attempting a test signature verification.
-   * @param {Buffer} publicKey
-   * @returns {Promise<boolean>}
-   */
-  async isValidPublicKey(publicKey) {
-    try {
-      if (!publicKey || !Buffer.isBuffer(publicKey)) return false;
-      const testKeyPair = await this.generateKeyPair();
-      const testData = 'test_validation';
-      const testSignature = await this.signData(testData, testKeyPair.privateKey);
-      const result = await this.verifySignature(testData, testSignature.signature, publicKey);
-      return result.isValid;
-    } catch (error) {
-      logger.error(`❌ Error validating public key: ${error.message}`);
-      return false;
-    }
-  }
+
 }
 
 // Export singleton instance
