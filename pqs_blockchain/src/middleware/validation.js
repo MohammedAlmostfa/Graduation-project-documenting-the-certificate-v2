@@ -24,21 +24,6 @@ export const validation = {
   },
 
   /**
-   * Validate certificate ID in request params
-   */
-  validateSignature: (req, res, next) => {
-    const { certificateId } = req.params;
-
-    if (!certificateId || certificateId.trim() === '') {
-      return res.status(400).json(
-        ApiResponse.error('Certificate ID is required in URL', 'VALIDATION_ERROR', null)
-      );
-    }
-
-    next();
-  },
-
-  /**
    * Validate user data in request body
    */
   validateUser: (req, res, next) => {

@@ -6,9 +6,6 @@ import {
     auth
 } from "../middleware/auth.js";
 import {
-    authorizationMiddleware
-} from "../middleware/authorization.js";
-import {
     validation
 } from "../middleware/validation.js";
 import {
@@ -28,13 +25,13 @@ const router = express.Router();
  * LAYERED SECURITY APPROACH:
  * 1. Rate limiting (applied to all routes)
  * 2. Authentication (verify user identity)
- * 3. Authorization (verify permissions via authorizationMiddleware)
+ * 3. Authorization (verify permissions via role hierarchy)
  * 4. Validation (validate input data)
  * 5. Controller (handle request)
  *
  * Permission Checks:
  * - All permission checks now centralized in PermissionService
- * - Used by authorizationMiddleware before reaching controller
+ * - Used by auth.requireRole() before reaching controller
  * - No redundant checks in controllers or services
  */
 

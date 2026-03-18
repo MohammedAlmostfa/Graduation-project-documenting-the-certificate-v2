@@ -1,4 +1,3 @@
-
 import {
     Certificate
 } from '../models/Certificate.js';
@@ -200,6 +199,7 @@ export class CertificateService {
             };
         }
     }
+
     /**
      * Validates signature order by checking actual signer roles from the DB.
      * Enforces the required chain: officer → dean → president.
@@ -257,39 +257,6 @@ export class CertificateService {
         return {
             valid: true
         };
-    }
-
-    /**
-     * Creates a new certificate with an initial officer signature.
-     * @param {Object} certificateData - Certificate information including student data
-     * @param {Object} officerSignature - Initial signature from the registration officer
-     * @returns {Object} Created certificate in JSON format
-     */
-    async createCertificate(certificateData, officerSignature) {
-        // backward-compatible helper, lower-level function that assumes the
-        // caller already generated a valid signature object
-        try {
-            const existingCert = await this.findCertificateByStudent(certificateData.studentId, certificateData.major);
-            if (existingCert) {
-                throw new ValidationError('Certificate already exists for this student in the same major');
-            }
-
-            const certificate = new Certificate(certificateData);
-
-            // certificateHash is generated once and stored; it is immutable
-            if (officerSignature) {
-                certificate.addSignature(officerSignature);
-            }
-
-            await this.repo.saveCertificate(certificate.toJSON());
-
-            logger.info(`✅ Created new certificate: ${certificate.id}`);
-            logger.info(`   Certificate Hash (immutable): ${certificate.certificateHash}`);
-            return certificate.toJSON();
-        } catch (error) {
-            logger.error(`❌ Error creating certificate: ${error.message}`);
-            throw error;
-        }
     }
 
     /**
@@ -371,51 +338,6 @@ export class CertificateService {
             logger.error(`❌ Error adding signature: ${error.message}`);
             throw error;
         }
-    }
-
-
-    /**
-     * @deprecated Use validateSignatureOrderWithRoles instead.
-     * Kept to avoid breaking any external callers.
-     */
-    validateSignatureOrder(certificate, newRole, useDBRoles = false) {
-        const roleOrder = [roles.OFFICER, roles.DEAN, roles.PRESIDENT];
-        const newRoleIndex = roleOrder.indexOf(newRole);
-
-        if (newRoleIndex === -1) {
-            logger.warn(`⚠️ Invalid role: ${newRole}`);
-            return false;
-        }
-
-        if (useDBRoles) {
-            const sigCount = certificate.signatures.length;
-
-            if (newRole === roles.OFFICER && sigCount > 0) {
-                logger.warn(`⚠️ Officer cannot sign twice`);
-                return false;
-            }
-            if (newRole === roles.DEAN && sigCount === 0) {
-                logger.warn(`⚠️ Dean cannot sign before Officer`);
-                return false;
-            }
-            if (newRole === roles.DEAN && sigCount > 1) {
-                logger.warn(`⚠️ Dean cannot sign twice`);
-                return false;
-            }
-            if (newRole === roles.PRESIDENT && sigCount < 2) {
-                logger.warn(`⚠️ President cannot sign before both Officer and Dean`);
-                return false;
-            }
-            if (newRole === roles.PRESIDENT && sigCount > 2) {
-                logger.warn(`⚠️ President cannot sign twice`);
-                return false;
-            }
-
-            return true;
-        }
-
-        // Legacy path — roles are no longer stored in signatures
-        return false;
     }
 
     /**

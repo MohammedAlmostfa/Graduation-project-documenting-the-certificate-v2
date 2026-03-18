@@ -150,17 +150,6 @@ export class KeyService {
         }
     }
 
-    /** Get a user by username. */
-    async getUserByUsername(username) {
-        try {
-            const allUsers = await this.getAllUsers();
-            const userData = allUsers.find(user => user.username === username);
-            return userData ? new User(userData) : null;
-        } catch {
-            return null;
-        }
-    }
-
     /** Get all users. */
     async getAllUsers() {
         try {
