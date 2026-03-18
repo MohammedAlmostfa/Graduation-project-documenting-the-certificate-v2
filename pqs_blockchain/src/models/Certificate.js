@@ -252,27 +252,55 @@ export class Certificate {
     /**
      * Convert certificate to JSON
      */
-    toJSON() {
+        toJSON() {
+                const trimmedSigs = (this.signatures || []).map(sig => ({
+                        signerId: sig.signerId,
+                        signature: sig.signature
+                }));
+                return {
+                        id: this.id,
+                        certificateNumber: this.certificateNumber,
+                        student: this.student,
+                        issueDate: this.issueDate,
+                        signatures: trimmedSigs,
+                        status: this.status,
+                        certificateHash: this.certificateHash,
+                        transactionHash: this.transactionHash,
+                        blockId: this.blockId,
+                        blockIndex: this.blockIndex,
+                        blockNumber: this.blockIndex, // alias for compatibility
+                        createdAt: this.createdAt,
+                        updatedAt: this.updatedAt
+                };
+        }
 
-        const trimmedSigs = (this.signatures || []).map(sig => ({
-            signerId: sig.signerId,
-            signature: sig.signature
-        }));
+        /**
+         * Return certificate for API responses (no signatures)
+         */
+        toPublicJSON() {
+            return {
+                id: this.id,
+                certificateNumber: this.certificateNumber,
+                student: this.student,
+                issueDate: this.issueDate,
+                status: this.status,
+                certificateHash: this.certificateHash,
+                transactionHash: this.transactionHash,
+                blockId: this.blockId,
+                blockIndex: this.blockIndex,
+                createdAt: this.createdAt,
+                updatedAt: this.updatedAt
+            };
+        }
 
-        return {
-            id: this.id,
-            certificateNumber: this.certificateNumber,
-            student: this.student,
-            issueDate: this.issueDate,
-            signatures: trimmedSigs,
-            status: this.status,
-            certificateHash: this.certificateHash,
-            transactionHash: this.transactionHash,
-            blockId: this.blockId,
-            blockIndex: this.blockIndex,
-            blockNumber: this.blockIndex, // alias for compatibility
-            createdAt: this.createdAt,
-            updatedAt: this.updatedAt
-        };
-    }
+        /**
+         * Return certificate with signature count only (no signature data)
+         */
+        toPublicJSONWithSignatureInfo() {
+            return {
+                ...this.toPublicJSON(),
+                signatureCount: (this.signatures || []).length,
+                isFulySigned: (this.signatures || []).length >= 3
+            };
+        }
 }

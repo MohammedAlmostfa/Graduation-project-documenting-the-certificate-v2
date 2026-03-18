@@ -31,15 +31,6 @@ export class User {
   }
 
   /**
-   * Check if the user can sign using a specific role.
-   * Admin can sign as any role.
-   */
-  canSignAs(role) {
-    if (this.role === 'admin') return true;
-    return this.role === role;
-  }
-
-  /**
    * Return user data without the private key.
    */
   toSafeJSON() {

@@ -27,12 +27,6 @@ export class ValidationError extends AppError {
   }
 }
 
-export class UnauthorizedError extends AppError {
-  constructor(message = 'Unauthorized', details = null) {
-    super(message, 'UNAUTHORIZED', 401, details);
-  }
-}
-
 export class ForbiddenError extends AppError {
   constructor(message = 'Forbidden', details = null) {
     super(message, 'FORBIDDEN', 403, details);

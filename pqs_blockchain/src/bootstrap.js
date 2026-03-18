@@ -9,7 +9,6 @@ import { CertificateService } from './services/certificateService.js';
 import { KeyService } from './services/keyService.js';
 import { KeyManagementService } from './services/keyManagementService.js';
 import { BlockchainService } from './services/blockchainService.js';
-import { permissionService } from './services/permissionService.js';
 import { validationService } from './services/validationService.js';
 
 import { certificateRepository } from './repositories/certificateRepository.js';
@@ -69,7 +68,5 @@ export {
   keyService,
   keyManagementService,
   blockchainService,
-  permissionService,
   validationService
-
 };

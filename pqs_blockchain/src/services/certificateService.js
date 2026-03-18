@@ -1,3 +1,4 @@
+
 import {
     Certificate
 } from '../models/Certificate.js';
@@ -42,7 +43,19 @@ export class CertificateService {
         this.keyManagementService = keyManagementService;
         this.blockchainService = null;
     }
-
+/**
+         * Get certificate for public API (no signatures)
+         */
+        async getCertificatePublic(certificateId) {
+            const certificateData = await this.repo.getCertificate(certificateId);
+            if (!certificateData) throw new NotFoundError('Certificate not found');
+            const certificate = new Certificate(certificateData);
+            const json = certificate.toPublicJSON();
+            if (certificateStatusLabels && json.status) {
+                json.statusLabel = certificateStatusLabels[json.status] || json.status;
+            }
+            return json;
+        }
     /**
      * تحقق من الشهادة باستخدام certificateNumber بدلاً من id
      * نفس منطق validateCertificate لكن البحث بالرقم

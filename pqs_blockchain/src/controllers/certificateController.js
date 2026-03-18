@@ -45,7 +45,8 @@ export const certificateController = {
                 user
             );
 
-            res.status(201).json(ApiResponse.success("Certificate created successfully", certificate));
+            const publicCert = new Certificate(certificate).toPublicJSONWithSignatureInfo();
+            res.status(201).json(ApiResponse.success("Certificate created successfully", publicCert));
     }),
 
     /**
@@ -64,7 +65,8 @@ export const certificateController = {
             }
 
             const updatedCertificate = await certificateService.signCertificate(certificateId, "dean", user);
-            res.json(ApiResponse.success("Dean signature added successfully", updatedCertificate));
+            const cert = new Certificate(updatedCertificate);
+            res.json(ApiResponse.success("Dean signature added successfully", cert.toPublicJSONWithSignatureInfo()));
     }),
 
     /**
@@ -106,7 +108,8 @@ export const certificateController = {
                 logger.error(`❌ Failed to enqueue certificate for mining: ${err.message}`);
             }
 
-            res.json(ApiResponse.success("President signature added and certificate queued for mining", updated));
+            const cert = new Certificate(updated);
+            res.json(ApiResponse.success("President signature added and certificate queued for mining", cert.toPublicJSON()));
     }),
 
     /**
@@ -121,7 +124,7 @@ export const certificateController = {
                 );
             }
 
-            const certificate = await certificateService.getCertificate(id);
+            const certificate = await certificateService.getCertificatePublic(id);
             res.json(ApiResponse.success("Certificate retrieved successfully", certificate));
     }),
 
@@ -144,7 +147,10 @@ export const certificateController = {
             );
         }
         const validationResult = await certificateService.validateCertificateByNumber(certificateNumber);
-        res.json(ApiResponse.success("Certificate validation result", validationResult));
+                if (validationResult.certificate) {
+                    validationResult.certificate = new Certificate(validationResult.certificate).toPublicJSON();
+                }
+                res.json(ApiResponse.success("Certificate validation result", validationResult));
     }),
 
     /**
@@ -152,7 +158,8 @@ export const certificateController = {
      */
     getAllCertificates: asyncWrapper(async (req, res) => {
             const certificates = await certificateService.getAllCertificates();
-            res.json(ApiResponse.success("Certificates list", { count: certificates.length, certificates }));
+            const publicCerts = certificates.map(c => new Certificate(c).toPublicJSON());
+            res.json(ApiResponse.success("Certificates list", { count: publicCerts.length, certificates: publicCerts }));
     }),
 
     /**
@@ -168,7 +175,8 @@ export const certificateController = {
             }
 
             const certificates = await certificateService.getCertificatesByStatus(status);
-            res.json(ApiResponse.success(`Certificates with status: ${status}`, { status, count: certificates.length, certificates }));
+            const publicCerts = certificates.map(c => new Certificate(c).toPublicJSON());
+            res.json(ApiResponse.success(`Certificates with status: ${status}`, { status, count: publicCerts.length, certificates: publicCerts }));
     }),
 
     /**
