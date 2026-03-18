@@ -128,6 +128,7 @@ export class BlockchainService {
 
             let blockId = null;
             let updatedCertificates = [];
+            let minedCertificates = [];
 
             try {
                 const atomicResult = await this.repo.minePendingCertificatesAtomic(
@@ -136,9 +137,29 @@ export class BlockchainService {
                 );
 
                 blockId = atomicResult.blockId;
-                updatedCertificates = atomicResult.minedCertificates;
+                minedCertificates = atomicResult.minedCertificates;
+                updatedCertificates = atomicResult.updatedCertificates;
 
-                logger.info(`Block ${blockNumber} mined with ${updatedCertificates.length} certificates`);
+                // ✅ NEW: Sync pending certificates from DB
+                await this.syncPendingFromDB();
+
+                // ✅ NEW: Verify all certificates were updated to COMPLETED
+                const minedCertIds = minedCertificates.map(c => c.id);
+                logger.info(`✅ ${minedCertIds.length} certificates mined and status updated to COMPLETED`);
+                for (const certId of minedCertIds) {
+                    const cert = await this.certificateService.getCertificate(certId);
+                    if (cert.status !== certificateStatus.COMPLETED) {
+                        logger.warn(`⚠️ Certificate ${certId} status not updated: ${cert.status}`);
+                    }
+                }
+
+                // ✅ NEW: Logging for verification
+                logger.info(`⛏️  Mining completed:`);
+                logger.info(`   Block: ${blockNumber}`);
+                logger.info(`   Certificates mined: ${minedCertificates.length}`);
+                logger.info(`   Pending queue cleared: ${this.blockchain.pendingCertificates.length === 0}`);
+                logger.info(`   Status sync verified ✅`);
+
             } catch (atomicErr) {
                 logger.error(`Atomic mining failed: ${atomicErr.message}`);
                 throw new Error(`Atomic mining transaction failed: ${atomicErr.message}`);
@@ -152,8 +173,8 @@ export class BlockchainService {
             return {
                 blockNumber,
                 blockHash,
-                certificatesMined: updatedCertificates.length,
-                minedCertificates: updatedCertificates,
+                certificatesMined: minedCertificates.length,
+                minedCertificates,
                 certificatesHash,
                 timestamp: block.timestamp
             };

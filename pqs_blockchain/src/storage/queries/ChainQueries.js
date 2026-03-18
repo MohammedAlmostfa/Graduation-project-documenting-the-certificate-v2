@@ -143,7 +143,15 @@ export class ChainQueries {
 				});
 			}
 			await conn.commit();
-			return { blockId, blockIndex, minedCertificates };
+
+			// Fetch updated certificate statuses from DB
+			const updateCertificatesSql = `
+				SELECT id, status FROM certificates
+				WHERE id IN (${certificateIds.map(() => '?').join(',')})
+			`;
+			const [updatedCerts] = await conn.query(updateCertificatesSql, certificateIds);
+
+			return { blockId, blockIndex, minedCertificates, updatedCertificates: updatedCerts };
 		} catch (error) {
 			try { await conn.rollback(); } catch (rollbackErr) { logger.error(`❌ Rollback error: ${rollbackErr.message}`); }
 			throw error;
