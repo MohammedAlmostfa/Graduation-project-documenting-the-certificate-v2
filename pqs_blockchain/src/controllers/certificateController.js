@@ -129,16 +129,22 @@ export const certificateController = {
      * Validate a certificate.
      */
     validateCertificate: asyncWrapper(async (req, res) => {
-            const { id } = req.params;
-
-            if (!id || id.trim() === '') {
-                return res.status(400).json(
-                    ApiResponse.error('Certificate ID is required', 'VALIDATION_ERROR', null)
-                );
-            }
-
-            const validationResult = await certificateService.validateCertificate(id);
-            res.json(ApiResponse.success("Certificate validation result", validationResult));
+        const { certificateNumber } = req.params;
+        // تحقق من وجود certificateNumber وأنه نصي وغير فارغ
+        if (!certificateNumber || typeof certificateNumber !== 'string' || certificateNumber.trim() === '') {
+            return res.status(400).json(
+                ApiResponse.error('Certificate number is required', 'VALIDATION_ERROR', null)
+            );
+        }
+        // تحقق من أن certificateNumber يطابق النمط المتوقع (مثال: CERT-2026-)
+        const certNumPattern = /^CERT-\d{4}-[A-Z0-9]+$/i;
+        if (!certNumPattern.test(certificateNumber)) {
+            return res.status(400).json(
+                ApiResponse.error('Invalid certificate number format', 'VALIDATION_ERROR', null)
+            );
+        }
+        const validationResult = await certificateService.validateCertificateByNumber(certificateNumber);
+        res.json(ApiResponse.success("Certificate validation result", validationResult));
     }),
 
     /**

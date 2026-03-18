@@ -1,3 +1,4 @@
+
 import {
     Certificate
 } from '../models/Certificate.js';
@@ -30,6 +31,175 @@ import {
  * Permission checks, data validation, and authentication are handled externally.
  */
 export class CertificateService {
+
+
+      constructor({
+        repo,
+        keyService,
+        keyManagementService
+    } = {}) {
+        this.repo = repo || certificateRepository;
+        this.keyService = keyService;
+        this.keyManagementService = keyManagementService;
+        this.blockchainService = null;
+    }
+
+    /**
+     * تحقق من الشهادة باستخدام certificateNumber بدلاً من id
+     * نفس منطق validateCertificate لكن البحث بالرقم
+     */
+    async validateCertificateByNumber(certificateNumber) {
+        try {
+            const certificateData = await this.repo.findByCertificateNumber(certificateNumber);
+            if (!certificateData) throw new NotFoundError('Certificate not found');
+            const certInstance = new Certificate(certificateData);
+            const storedCertificateHash = certInstance.certificateHash;
+            const currentCalculatedHash = certInstance.calculateHash();
+            logger.info(`🔍 Hash Verification: Stored=${storedCertificateHash.substring(0, 16)}... Current=${currentCalculatedHash.substring(0, 16)}...`);
+
+            let hashTampered = false;
+            if (storedCertificateHash !== currentCalculatedHash) {
+                logger.warn(`⚠️ TAMPERING DETECTED: Certificate hash mismatch! Data has been modified in database.`);
+                hashTampered = true;
+            }
+
+            let blockInfo = null;
+            let blockchainFound = false;
+            let blockchainHashMatch = null;
+
+            if (this.blockchainService && typeof this.blockchainService.getCertificateBlockInfo === 'function') {
+                try {
+                    blockInfo = await this.blockchainService.getCertificateBlockInfo(certInstance.id);
+                    if (blockInfo && blockInfo.transaction) {
+                        blockchainFound = true;
+                        const tx = blockInfo.transaction;
+                        const storedBlockCertHash = tx.certificateHash || null;
+                        blockchainHashMatch = storedBlockCertHash !== null ? (storedBlockCertHash === storedCertificateHash) : null;
+                    }
+                } catch (err) {
+                    logger.warn(`⚠️ Failed to call blockchain service: ${err.message}`);
+                }
+            }
+
+            const signaturesReport = [];
+            let allSignaturesValid = true;
+
+            for (const sig of certInstance.signatures || []) {
+                const report = {
+                    signerId: sig.signerId || null,
+                    signaturePresent: !!sig.signature,
+                    verified: false,
+                    reason: null,
+                    role: null
+                };
+
+                try {
+                    if (!sig.signerId) {
+                        report.reason = 'missing-signer-id';
+                        allSignaturesValid = false;
+                        signaturesReport.push(report);
+                        continue;
+                    }
+
+                    const signerRole = await this._getUserRoleFromDB(sig.signerId);
+                    if (!signerRole) {
+                        report.reason = 'signer-not-found-in-db';
+                        allSignaturesValid = false;
+                        signaturesReport.push(report);
+                        continue;
+                    }
+
+                    report.role = signerRole;
+
+                    let publicKeyBuffer = null;
+                    if (this.keyManagementService && typeof this.keyManagementService.getPublicKey === 'function') {
+                        try {
+                            publicKeyBuffer = await this.keyManagementService.getPublicKey(sig.signerId);
+                        } catch (err) {
+                            logger.debug(`⚠️ Failed to retrieve public key for user ${sig.signerId}: ${err.message}`);
+                            publicKeyBuffer = null;
+                        }
+                    }
+
+                    if (!publicKeyBuffer) {
+                        report.reason = 'public-key-not-found';
+                        allSignaturesValid = false;
+                        signaturesReport.push(report);
+                        continue;
+                    }
+
+                    const dataToVerify = storedCertificateHash;
+                    const verifyResult = await oqsCrypto.verifySignature(dataToVerify, sig.signature, publicKeyBuffer);
+                    if (verifyResult && verifyResult.isValid) {
+                        report.verified = true;
+                    } else {
+                        report.verified = false;
+                        report.reason = verifyResult && verifyResult.error ? verifyResult.error : 'invalid-signature';
+                        allSignaturesValid = false;
+                    }
+                } catch (err) {
+                    report.verified = false;
+                    report.reason = err.message;
+                    allSignaturesValid = false;
+                }
+
+                signaturesReport.push(report);
+            }
+
+            const signaturesCount = (certInstance.signatures || []).length;
+            const signedByRoles = signaturesReport
+                .filter(r => r.role)
+                .map(s => s.role);
+            const requiredRoles = [roles.OFFICER, roles.DEAN, roles.PRESIDENT];
+            const missingRequiredSignatures = requiredRoles.filter(r => !signedByRoles.includes(r));
+            const signedAll = missingRequiredSignatures.length === 0;
+
+            const tamperedSignatures = signaturesReport.filter(r => !r.verified);
+            const tamperedSignaturesCount = tamperedSignatures.length;
+
+            const hashLocalMatch = currentCalculatedHash === storedCertificateHash;
+            const blockchainOk = !blockchainFound || (blockchainFound && blockchainHashMatch === true);
+            const overallValid = allSignaturesValid && hashLocalMatch && signedAll && blockchainOk;
+
+            let status, message;
+
+            if (overallValid) {
+                status = 'VALID';
+                message = 'الشهادة صحيحة وموثوقة وسارية المفعول';
+                return {
+                    status,
+                    message,
+                    certificate: certInstance.toJSON(),
+                };
+            } else if (hashTampered || !hashLocalMatch) {
+                status = 'INVALID';
+                message = 'الشهادة غير صحيحة - تم اكتشاف تعديل في البيانات';
+            } else if (tamperedSignaturesCount > 0 || !allSignaturesValid) {
+                status = 'INVALID';
+                message = 'الشهادة غير صحيحة - التواقيع الرقمية غير صالحة أو مزيفة';
+            } else if (!signedAll || missingRequiredSignatures.length > 0) {
+                status = 'INVALID';
+                message = `الشهادة لم تتم الموافقة عليها من قبل جميع المسؤولين (ناقصة التواقيع: ${missingRequiredSignatures.join(', ')})`;
+            } else if (!blockchainOk) {
+                status = 'INVALID';
+                message = 'الشهادة غير مسجلة في السجل الموثوق أو التسجيل غير متطابق';
+            } else {
+                status = 'INVALID';
+                message = 'فشل التحقق من الشهادة - حدث خطأ في معالجة البيانات';
+            }
+
+            return {
+                status,
+                message
+            };
+        } catch (error) {
+            logger.error(`❌ Error validating certificate by number: ${error.message}`);
+            return {
+                status: 'INVALID',
+                message: 'حدث خطأ في التحقق من الشهادة - يرجى المحاولة مرة أخرى'
+            };
+        }
+    }
     /**
      * Validates signature order by checking actual signer roles from the DB.
      * Enforces the required chain: officer → dean → president.
@@ -87,16 +257,6 @@ export class CertificateService {
         return {
             valid: true
         };
-    }
-    constructor({
-        repo,
-        keyService,
-        keyManagementService
-    } = {}) {
-        this.repo = repo || certificateRepository;
-        this.keyService = keyService;
-        this.keyManagementService = keyManagementService;
-        this.blockchainService = null;
     }
 
     /**
@@ -330,165 +490,7 @@ export class CertificateService {
         });
     }
 
-    /**
-     * Validates a certificate: checks data integrity, digital signatures, required roles, and blockchain record.
-     * Uses the stored certificateHash (never recomputed from scratch).
-     * Returns a simplified Arabic response: { status, message }.
-     */
-    async validateCertificate(certificateId) {
-        try {
-            const certificate = await this.getCertificate(certificateId);
-            const certInstance = new Certificate(certificate);
 
-            const storedCertificateHash = certInstance.certificateHash;
-            const currentCalculatedHash = certInstance.calculateHash();
-            logger.info(`🔍 Hash Verification: Stored=${storedCertificateHash.substring(0, 16)}... Current=${currentCalculatedHash.substring(0, 16)}...`);
-
-            let hashTampered = false;
-            if (storedCertificateHash !== currentCalculatedHash) {
-                logger.warn(`⚠️ TAMPERING DETECTED: Certificate hash mismatch! Data has been modified in database.`);
-                hashTampered = true;
-            }
-
-            let blockInfo = null;
-            let blockchainFound = false;
-            let blockchainHashMatch = null;
-
-            if (this.blockchainService && typeof this.blockchainService.getCertificateBlockInfo === 'function') {
-                try {
-                    blockInfo = await this.blockchainService.getCertificateBlockInfo(certificateId);
-                    if (blockInfo && blockInfo.transaction) {
-                        blockchainFound = true;
-                        const tx = blockInfo.transaction;
-                        const storedBlockCertHash = tx.certificateHash || null;
-                        blockchainHashMatch = storedBlockCertHash !== null ? (storedBlockCertHash === storedCertificateHash) : null;
-                    }
-                } catch (err) {
-                    logger.warn(`⚠️ Failed to call blockchain service: ${err.message}`);
-                }
-            }
-
-            const signaturesReport = [];
-            let allSignaturesValid = true;
-
-            for (const sig of certInstance.signatures || []) {
-                const report = {
-                    signerId: sig.signerId || null,
-                    signaturePresent: !!sig.signature,
-                    verified: false,
-                    reason: null,
-                    role: null
-                };
-
-                try {
-                    if (!sig.signerId) {
-                        report.reason = 'missing-signer-id';
-                        allSignaturesValid = false;
-                        signaturesReport.push(report);
-                        continue;
-                    }
-
-                    const signerRole = await this._getUserRoleFromDB(sig.signerId);
-                    if (!signerRole) {
-                        report.reason = 'signer-not-found-in-db';
-                        allSignaturesValid = false;
-                        signaturesReport.push(report);
-                        continue;
-                    }
-
-                    report.role = signerRole;
-
-                    let publicKeyBuffer = null;
-                    if (this.keyManagementService && typeof this.keyManagementService.getPublicKey === 'function') {
-                        try {
-                            publicKeyBuffer = await this.keyManagementService.getPublicKey(sig.signerId);
-                        } catch (err) {
-                            logger.debug(`⚠️ Failed to retrieve public key for user ${sig.signerId}: ${err.message}`);
-                            publicKeyBuffer = null;
-                        }
-                    }
-
-                    if (!publicKeyBuffer) {
-                        report.reason = 'public-key-not-found';
-                        allSignaturesValid = false;
-                        signaturesReport.push(report);
-                        continue;
-                    }
-
-                    const dataToVerify = storedCertificateHash;
-                    const verifyResult = await oqsCrypto.verifySignature(dataToVerify, sig.signature, publicKeyBuffer);
-                    if (verifyResult && verifyResult.isValid) {
-                        report.verified = true;
-                    } else {
-                        report.verified = false;
-                        report.reason = verifyResult && verifyResult.error ? verifyResult.error : 'invalid-signature';
-                        allSignaturesValid = false;
-                    }
-                } catch (err) {
-                    report.verified = false;
-                    report.reason = err.message;
-                    allSignaturesValid = false;
-                }
-
-                signaturesReport.push(report);
-            }
-
-            const signaturesCount = (certInstance.signatures || []).length;
-            const signedByRoles = signaturesReport
-                .filter(r => r.role)
-                .map(s => s.role);
-            const requiredRoles = [roles.OFFICER, roles.DEAN, roles.PRESIDENT];
-            const missingRequiredSignatures = requiredRoles.filter(r => !signedByRoles.includes(r));
-            const signedAll = missingRequiredSignatures.length === 0;
-
-            const tamperedSignatures = signaturesReport.filter(r => !r.verified);
-            const tamperedSignaturesCount = tamperedSignatures.length;
-
-            const hashLocalMatch = currentCalculatedHash === storedCertificateHash;
-            const blockchainOk = !blockchainFound || (blockchainFound && blockchainHashMatch === true);
-            const overallValid = allSignaturesValid && hashLocalMatch && signedAll && blockchainOk;
-
-            let status, message;
-
-            if (overallValid) {
-                status = 'VALID';
-                message = 'الشهادة صحيحة وموثوقة وسارية المفعول';
-
-                return {
-                    status,
-                    message,
-                    certificate: certificate,
-
-                };
-            } else if (hashTampered || !hashLocalMatch) {
-                status = 'INVALID';
-                message = 'الشهادة غير صحيحة - تم اكتشاف تعديل في البيانات';
-            } else if (tamperedSignaturesCount > 0 || !allSignaturesValid) {
-                status = 'INVALID';
-                message = 'الشهادة غير صحيحة - التواقيع الرقمية غير صالحة أو مزيفة';
-            } else if (!signedAll || missingRequiredSignatures.length > 0) {
-                status = 'INVALID';
-                message = `الشهادة لم تتم الموافقة عليها من قبل جميع المسؤولين (ناقصة التواقيع: ${missingRequiredSignatures.join(', ')})`;
-            } else if (!blockchainOk) {
-                status = 'INVALID';
-                message = 'الشهادة غير مسجلة في السجل الموثوق أو التسجيل غير متطابق';
-            } else {
-                status = 'INVALID';
-                message = 'فشل التحقق من الشهادة - حدث خطأ في معالجة البيانات';
-            }
-
-            return {
-                status,
-                message
-            };
-        } catch (error) {
-            logger.error(`❌ Error validating certificate: ${error.message}`);
-            return {
-                status: 'INVALID',
-                message: 'حدث خطأ في التحقق من الشهادة - يرجى المحاولة مرة أخرى'
-            };
-        }
-    }
 
     /**
      * Signs a certificate using the authenticated user's key.

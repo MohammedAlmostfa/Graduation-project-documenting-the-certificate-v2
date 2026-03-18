@@ -1,3 +1,4 @@
+
 import * as mysql from 'mysql2/promise';
 import { logger } from '../utils/logger.js';
 import { TABLE_SCHEMAS } from './schema.js';
@@ -10,6 +11,9 @@ import dotenv from 'dotenv';
 dotenv.config(); // Load environment variables from .env
 
 export class MySQLDB {
+  async getCertificateByNumber(certificateNumber) {
+    return this._execute(conn => CertificateQueries.getCertificateByNumber(conn, certificateNumber));
+  }
   constructor(config = {}) {
     this.config = {
       host: process.env.MYSQL_HOST,

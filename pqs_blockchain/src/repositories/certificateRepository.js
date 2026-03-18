@@ -1,3 +1,4 @@
+
 import { mysqlDB } from '../storage/mysqlDB.js';
 import { logger } from '../utils/logger.js';
 import { BaseRepository } from './baseRepository.js';
@@ -7,6 +8,16 @@ import { BaseRepository } from './baseRepository.js';
  * Handles database operations for certificates.
  */
 class CertificateRepository extends BaseRepository {
+    /**
+     * البحث عن شهادة باستخدام certificateNumber فقط
+     */
+    async findByCertificateNumber(certificateNumber) {
+        try {
+            return await this.exec('findByCertificateNumber', this.db.getCertificateByNumber, certificateNumber);
+        } catch (error) {
+            return null;
+        }
+    }
     /**
      * @param {object} db - Database interface (default: mysqlDB)
      */

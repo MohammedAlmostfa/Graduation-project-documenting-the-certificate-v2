@@ -1,3 +1,4 @@
+
 import { logger } from '../../utils/logger.js';
 import { firstNonNull, toFloatSafe, hasValue, isArray, isEmptyArray } from '../../utils/validators.js';
 import { normalizeStatus, formatDateIfPresent, formatDateTimeIfPresent } from './shared.js';
@@ -22,6 +23,30 @@ const CERT_SELECT_BASE = `
 `;
 
 export class CertificateQueries {
+
+    	/**
+	 * البحث عن شهادة باستخدام certificateNumber فقط
+	 */
+	static async getCertificateByNumber(conn, certificateNumber) {
+		// البحث عن الشهادة بالرقم
+		const [[row]] = await conn.query(`${CERT_SELECT_BASE} WHERE c.certificate_number = ?`, [certificateNumber]);
+		if (!row) return null;
+		// تحقق من عدم وجود أكثر من شهادة بنفس الرقم (تفرد)
+		const [countRows] = await conn.query(`SELECT COUNT(*) as cnt FROM certificates WHERE certificate_number = ?`, [certificateNumber]);
+		if (countRows[0].cnt > 1) {
+			throw new Error('Certificate number is not unique');
+		}
+		const [sigs] = await conn.query(
+			'SELECT signer_id, signature FROM certificate_signatures WHERE certificate_id = ?',
+			[row.id]
+		);
+		const cert = this._rowToCertificate(row);
+		cert.signatures = sigs.map(r => ({
+			signerId: r.signer_id,
+			signature: r.signature
+		}));
+		return cert;
+	}
 	static async _upsertStudent(conn, student = {}) {
 		if (!student.id) {
 			const { v4: uuidv4 } = await import('uuid');

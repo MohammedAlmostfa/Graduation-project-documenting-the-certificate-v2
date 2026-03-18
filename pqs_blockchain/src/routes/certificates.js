@@ -84,7 +84,7 @@ router.get("/:id",
  * Permissions: None required (public validation)
  * Validation: Certificate ID in params
  */
-router.get("/:id/validate",
+router.get("/:certificateNumber/validate",
     certificateController.validateCertificate
 );
 
