@@ -36,7 +36,7 @@ export const adminController = {
             const validation = validationService.validateUserData(userData);
             if (!validation.isValid) {
                 return res.status(400).json(
-                    ApiResponse.error('Invalid user data', 'VALIDATION_ERROR', validation.errors)
+                    ApiResponse.error('بيانات المستخدم غير صالحة', 'VALIDATION_ERROR', validation.errors)
                 );
             }
 
@@ -49,7 +49,7 @@ export const adminController = {
             );
 
             res.status(201).json(
-                ApiResponse.success('User created successfully', {
+                ApiResponse.success('تم إنشاء المستخدم بنجاح', {
                     user: result.user,
                     privateKey: result.privateKey
                 })
@@ -62,7 +62,7 @@ export const adminController = {
      */
     getAllUsers: asyncWrapper(async (req, res) => {
             const users = await keyService.getAllUsers();
-            res.json(ApiResponse.success('User list retrieved successfully', {
+            res.json(ApiResponse.success('تم جلب قائمة المستخدمين بنجاح', {
                 count: users.length,
                 users
             }));
@@ -78,12 +78,12 @@ export const adminController = {
             // Check if userId exists
             if (!userId || userId.trim() === '') {
                 return res.status(400).json(
-                    ApiResponse.error('User ID is required', 'VALIDATION_ERROR', null)
+                    ApiResponse.error('معرّف المستخدم مطلوب', 'VALIDATION_ERROR', null)
                 );
             }
 
             const user = await keyService.getUser(userId);
-            res.json(ApiResponse.success('User data retrieved successfully', user.toSafeJSON()));
+            res.json(ApiResponse.success('تم جلب بيانات المستخدم بنجاح', user.toSafeJSON()));
     }),
 
     /**
@@ -105,7 +105,7 @@ export const adminController = {
                 return acc;
             }, {});
 
-            res.json(ApiResponse.success('System statistics retrieved successfully', {
+            res.json(ApiResponse.success('تم جلب إحصائيات النظام بنجاح', {
                 system: {
                     uptime: process.uptime(),
                     memory: process.memoryUsage(),
@@ -147,7 +147,7 @@ export const adminController = {
                 }
             };
 
-            logger.info(`✅ Backup created at ${backupData.timestamp}`);
-            res.json(ApiResponse.success('Backup created successfully', backupData));
+            logger.info(`✅ تم إنشاء النسخة الاحتياطية في ${backupData.timestamp}`);
+            res.json(ApiResponse.success('تم إنشاء النسخة الاحتياطية بنجاح', backupData));
     })
 };

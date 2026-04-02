@@ -46,7 +46,7 @@ export const certificateController = {
             );
 
             const publicCert = new Certificate(certificate).toPublicJSONWithSignatureInfo();
-            res.status(201).json(ApiResponse.success("Certificate created successfully", publicCert));
+            res.status(201).json(ApiResponse.success("تم إنشاء الشهادة بنجاح", publicCert));
     }),
 
     /**
@@ -60,13 +60,13 @@ export const certificateController = {
             // Check certificate ID
             if (!certificateId || certificateId.trim() === '') {
                 return res.status(400).json(
-                    ApiResponse.error('Certificate ID is required', 'VALIDATION_ERROR', null)
+                    ApiResponse.error('معرّف الشهادة مطلوب', 'VALIDATION_ERROR', null)
                 );
             }
 
             const updatedCertificate = await certificateService.signCertificate(certificateId, "dean", user);
             const cert = new Certificate(updatedCertificate);
-            res.json(ApiResponse.success("Dean signature added successfully", cert.toPublicJSONWithSignatureInfo()));
+            res.json(ApiResponse.success("تمت إضافة توقيع العميد بنجاح", cert.toPublicJSONWithSignatureInfo()));
     }),
 
     /**
@@ -80,7 +80,7 @@ export const certificateController = {
             // Check certificate ID
             if (!certificateId || certificateId.trim() === '') {
                 return res.status(400).json(
-                    ApiResponse.error('Certificate ID is required', 'VALIDATION_ERROR', null)
+                    ApiResponse.error('معرّف الشهادة مطلوب', 'VALIDATION_ERROR', null)
                 );
             }
 
@@ -88,7 +88,7 @@ export const certificateController = {
             const certificate = await certificateService.getCertificate(certificateId);
             if (certificate.status !== certificateStatus.DEAN_SIGNED) {
                 return res.status(400).json(
-                    ApiResponse.error('Certificate must be signed by dean before president', 'INVALID_STATE', null)
+                    ApiResponse.error('يجب توقيع الشهادة من العميد قبل الرئيس', 'INVALID_STATE', null)
                 );
             }
 
@@ -109,7 +109,7 @@ export const certificateController = {
             }
 
             const cert = new Certificate(updated);
-            res.json(ApiResponse.success("President signature added and certificate queued for mining", cert.toPublicJSON()));
+            res.json(ApiResponse.success("تمت إضافة توقيع الرئيس وتمت جدولة الشهادة للتعدين", cert.toPublicJSON()));
     }),
 
     /**
@@ -120,12 +120,12 @@ export const certificateController = {
 
             if (!id || id.trim() === '') {
                 return res.status(400).json(
-                    ApiResponse.error('Certificate ID is required', 'VALIDATION_ERROR', null)
+                    ApiResponse.error('معرّف الشهادة مطلوب', 'VALIDATION_ERROR', null)
                 );
             }
 
             const certificate = await certificateService.getCertificatePublic(id);
-            res.json(ApiResponse.success("Certificate retrieved successfully", certificate));
+            res.json(ApiResponse.success("تم جلب الشهادة بنجاح", certificate));
     }),
 
     /**
@@ -150,7 +150,7 @@ export const certificateController = {
                 if (validationResult.certificate) {
                     validationResult.certificate = new Certificate(validationResult.certificate).toPublicJSON();
                 }
-                res.json(ApiResponse.success("Certificate validation result", validationResult));
+                res.json(ApiResponse.success("نتيجة التحقق من الشهادة", validationResult));
     }),
 
     /**
@@ -159,7 +159,7 @@ export const certificateController = {
     getAllCertificates: asyncWrapper(async (req, res) => {
             const certificates = await certificateService.getAllCertificates();
             const publicCerts = certificates.map(c => new Certificate(c).toPublicJSON());
-            res.json(ApiResponse.success("Certificates list", { count: publicCerts.length, certificates: publicCerts }));
+            res.json(ApiResponse.success("قائمة الشهادات", { count: publicCerts.length, certificates: publicCerts }));
     }),
 
     /**
@@ -170,13 +170,13 @@ export const certificateController = {
 
             if (!status || status.trim() === '') {
                 return res.status(400).json(
-                    ApiResponse.error('Status parameter is required', 'VALIDATION_ERROR', null)
+                    ApiResponse.error('معامل الحالة مطلوب', 'VALIDATION_ERROR', null)
                 );
             }
 
             const certificates = await certificateService.getCertificatesByStatus(status);
             const publicCerts = certificates.map(c => new Certificate(c).toPublicJSON());
-            res.json(ApiResponse.success(`Certificates with status: ${status}`, { status, count: publicCerts.length, certificates: publicCerts }));
+            res.json(ApiResponse.success(`الشهادات بالحالة: ${status}`, { status, count: publicCerts.length, certificates: publicCerts }));
     }),
 
     /**

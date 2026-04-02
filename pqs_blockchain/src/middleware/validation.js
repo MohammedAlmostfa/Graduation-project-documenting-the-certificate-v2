@@ -16,7 +16,7 @@ export const validation = {
 
     if (!validation.isValid) {
       return res.status(400).json(
-        ApiResponse.error('Invalid certificate data', 'VALIDATION_ERROR', validation.errors)
+        ApiResponse.error('بيانات الشهادة غير صالحة', 'VALIDATION_ERROR', validation.errors)
       );
     }
 
@@ -30,7 +30,7 @@ export const validation = {
     const validation = validationService.validateUserData(req.body);
     if (!validation.isValid) {
       return res.status(400).json(
-        ApiResponse.error('Invalid user data', 'VALIDATION_ERROR', validation.errors)
+        ApiResponse.error('بيانات المستخدم غير صالحة', 'VALIDATION_ERROR', validation.errors)
       );
     }
     next();
@@ -45,7 +45,7 @@ export const validation = {
 
     if (nationalId && !validationService.validateNationalId(nationalId)) {
       return res.status(400).json(
-        ApiResponse.error('Invalid national ID', 'VALIDATION_ERROR', 'National ID must be 14 digits')
+        ApiResponse.error('الرقم القومي غير صالح', 'VALIDATION_ERROR', 'يجب أن يتكون الرقم القومي من 14 رقمًا')
       );
     }
 
@@ -60,7 +60,7 @@ export const validation = {
 
     if (gpa !== undefined && !validationService.validateGPA(gpa)) {
       return res.status(400).json(
-        ApiResponse.error('Invalid GPA', 'VALIDATION_ERROR', 'GPA must be between 0 and 4')
+        ApiResponse.error('المعدل غير صالح', 'VALIDATION_ERROR', 'يجب أن يكون المعدل بين 0 و 4')
       );
     }
 

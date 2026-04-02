@@ -35,8 +35,8 @@ export const rateLimit = (
     // Check if client exceeded the maximum allowed requests
     if (recentRequests.length >= maxRequests) {
       return res.status(429).json({
-        error: 'Rate limit exceeded',
-        message: `Maximum allowed: ${maxRequests} requests every ${windowMs / 60000} minutes`
+        error: 'تم تجاوز الحد الأقصى للطلبات',
+        message: `الحد الأقصى المسموح: ${maxRequests} طلب كل ${windowMs / 60000} دقيقة`
       });
     }
 

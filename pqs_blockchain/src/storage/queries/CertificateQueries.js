@@ -34,7 +34,7 @@ export class CertificateQueries {
 		// تحقق من عدم وجود أكثر من شهادة بنفس الرقم (تفرد)
 		const [countRows] = await conn.query(`SELECT COUNT(*) as cnt FROM certificates WHERE certificate_number = ?`, [certificateNumber]);
 		if (countRows[0].cnt > 1) {
-			throw new Error('Certificate number is not unique');
+			throw new Error('رقم الشهادة غير فريد');
 		}
 		const [sigs] = await conn.query(
 			'SELECT signer_id, signature FROM certificate_signatures WHERE certificate_id = ?',

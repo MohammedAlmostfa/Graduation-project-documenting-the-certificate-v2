@@ -22,9 +22,9 @@ export const auth = {
         if (!userId) {
             return res.status(401).json(
                 ApiResponse.error(
-                    "Authentication required",
+                    "مطلوب تسجيل الدخول",
                     "AUTH_REQUIRED",
-                    "Please provide user ID in header: x-user-id"
+                    "يرجى توفير معرف المستخدم في الهيدر: x-user-id"
                 )
             );
         }
@@ -35,7 +35,7 @@ export const auth = {
 
             if (!user) {
                 return res.status(401).json(
-                    ApiResponse.error("Authentication failed", "AUTH_FAILED", "User not found")
+                    ApiResponse.error("فشل التحقق من الهوية", "AUTH_FAILED", "المستخدم غير موجود")
                 );
             }
 
@@ -57,7 +57,7 @@ export const auth = {
         } catch (error) {
             logger.error(`❌ Authentication error: ${error.message}`);
             res.status(401).json(
-                ApiResponse.error("Authentication failed", "AUTH_ERROR", error.message)
+                ApiResponse.error("فشل التحقق من الهوية", "AUTH_ERROR", error.message)
             );
         }
     },
@@ -70,7 +70,7 @@ export const auth = {
         return (req, res, next) => {
             if (!req.user) {
                 return res.status(401).json(
-                    ApiResponse.error("Authentication required first", "AUTH_REQUIRED", null)
+                    ApiResponse.error("يجب تسجيل الدخول أولاً", "AUTH_REQUIRED", null)
                 );
             }
 
@@ -80,9 +80,9 @@ export const auth = {
 
             res.status(403).json(
                 ApiResponse.error(
-                    "Insufficient permissions",
+                    "صلاحيات غير كافية",
                     "FORBIDDEN",
-                    `Required role: ${requiredRole}`
+                    `الدور المطلوب: ${requiredRole}`
                 )
             );
         };

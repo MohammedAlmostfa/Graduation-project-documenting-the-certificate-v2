@@ -42,12 +42,12 @@ class ApiHelper
                 'error'  => $json['error'] ?? null,
             ];
         } catch (\Exception $e) {
-            Log::error('API request failed', [
-                'url'    => $url,
-                'method' => $method,
-                'error'  => $e->getMessage(),
-'auth_user_id' => Auth::user()->user_id ?? null,
-            ]);
+            return [
+                'status'  => 500,
+                'data'    => null,
+                'message' => 'Exception during request: ' . $e->getMessage(),
+            ];
+
 
             return [
                 'status'  => 500,

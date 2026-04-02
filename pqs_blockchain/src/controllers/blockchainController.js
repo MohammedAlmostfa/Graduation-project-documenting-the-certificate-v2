@@ -22,7 +22,7 @@ export const blockchainController = {
      */
     getBlockchainStats: asyncWrapper(async (req, res) => {
             const stats = await blockchainService.getBlockchainStats();
-            res.json(ApiResponse.success('Blockchain statistics retrieved successfully', { blockchain: stats }));
+            res.json(ApiResponse.success('تم جلب إحصائيات البلوك تشين بنجاح', { blockchain: stats }));
     }),
 
     /**
@@ -30,7 +30,7 @@ export const blockchainController = {
      */
     validateBlockchain: asyncWrapper(async (req, res) => {
             const validationResult = await blockchainService.validateBlockchain();
-            res.json(ApiResponse.success('Blockchain validation result', { validation: validationResult }));
+            res.json(ApiResponse.success('نتيجة التحقق من البلوك تشين', { validation: validationResult }));
     }),
 
     /**
@@ -38,11 +38,11 @@ export const blockchainController = {
      */
     minePendingCertificates: asyncWrapper(async (req, res) => {
             const result = await blockchainService.minePendingCertificates();
-            if (result) {
-                res.json(ApiResponse.success('Pending certificates mined successfully', result));
-            } else {
-                res.status(404).json(ApiResponse.error('No pending certificates to mine', null));
-            }
+                        if (result) {
+                                res.json(ApiResponse.success('تم تعدين الشهادات المعلقة بنجاح', result));
+                        } else {
+                                res.status(404).json(ApiResponse.error('لا توجد شهادات معلقة للتعدين', null));
+                        }
     }),
 
     /**
@@ -51,7 +51,7 @@ export const blockchainController = {
     getCertificateBlockInfo: asyncWrapper(async (req, res) => {
             const { certificateId } = req.params;
             const blockInfo = await blockchainService.getCertificateBlockInfo(certificateId);
-            res.json(ApiResponse.success('Certificate block information retrieved successfully', { certificateId, blockInfo }));
+            res.json(ApiResponse.success('تم جلب معلومات بلوك الشهادة بنجاح', { certificateId, blockInfo }));
     }),
 
     /**
@@ -60,7 +60,7 @@ export const blockchainController = {
     getBlock: asyncWrapper(async (req, res) => {
             const { blockNumber } = req.params;
             const block = await blockchainService.getBlock(parseInt(blockNumber));
-            res.json(ApiResponse.success('Block retrieved successfully', { block }));
+            res.json(ApiResponse.success('تم جلب البلوك بنجاح', { block }));
     }),
 
     /**
@@ -68,7 +68,7 @@ export const blockchainController = {
      */
     getAllBlocks: asyncWrapper(async (req, res) => {
             const blocks = await blockchainService.getAllBlocks();
-            res.json(ApiResponse.success('All blocks retrieved successfully', { count: blocks.length, blocks }));
+            res.json(ApiResponse.success('تم جلب جميع البلوكات بنجاح', { count: blocks.length, blocks }));
     }),
 
     /**
@@ -76,6 +76,6 @@ export const blockchainController = {
      */
     getPendingCertificates: asyncWrapper(async (req, res) => {
             const stats = await blockchainService.getBlockchainStats();
-            res.json(ApiResponse.success('Pending certificates retrieved successfully', { pendingCount: stats.pendingCertificates, stats }));
+            res.json(ApiResponse.success('تم جلب الشهادات المعلقة بنجاح', { pendingCount: stats.pendingCertificates, stats }));
     })
 };

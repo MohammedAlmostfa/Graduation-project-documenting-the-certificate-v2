@@ -64,7 +64,7 @@ export class OQSCrypto {
       if (Buffer.isBuffer(publicKey)) return publicKey.toString('base64');
       if (publicKey instanceof Uint8Array) return Buffer.from(publicKey).toString('base64');
       if (typeof publicKey === 'string') return publicKey;
-      throw new Error('Unsupported public key type for serialization');
+      throw new Error('نوع مفتاح عام غير مدعوم للتسلسل');
     } catch (error) {
       logger.error(`❌ Error serializing public key: ${error.message}`);
       throw error;
@@ -90,7 +90,7 @@ export class OQSCrypto {
       if (typeof serialized === 'object' && serialized.type === 'Buffer' && Array.isArray(serialized.data)) {
         return Buffer.from(serialized.data);
       }
-      throw new Error('Unsupported public key format for deserialization');
+      throw new Error('تنسيق مفتاح عام غير مدعوم لفك التسلسل');
     } catch (error) {
       logger.error(`❌ Error deserializing public key: ${error.message}`);
       logger.error(`❌ Data type: ${typeof serialized}`);

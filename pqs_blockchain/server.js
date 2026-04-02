@@ -64,7 +64,7 @@ app.use('/api/admin', adminRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.json(ApiResponse.success('🏫 Distributed University Certificate System', {
+  res.json(ApiResponse.success('🏫 نظام الشهادات الجامعية الموزع', {
     version: '1.0.0',
     endpoints: {
       certificates: '/api/certificates',
@@ -89,7 +89,7 @@ app.use((error, req, res, next) => {
       rawBody: truncated
     });
 
-    return res.status(400).json(ApiResponse.error('Bad Request - Invalid JSON', 'BAD_REQUEST', error.message));
+    return res.status(400).json(ApiResponse.error('طلب غير صالح - JSON غير صالح', 'BAD_REQUEST', error.message));
   }
 
   if (error instanceof AppError) {
@@ -98,18 +98,18 @@ app.use((error, req, res, next) => {
   }
 
   logger.error('Server error:', error);
-  res.status(500).json(ApiResponse.error('Internal Server Error', 'INTERNAL_ERROR', error.message));
+  res.status(500).json(ApiResponse.error('خطأ في الخادم الداخلي', 'INTERNAL_ERROR', error.message));
 });
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json(ApiResponse.error('Endpoint not found', 'NOT_FOUND', req.path));
+  res.status(404).json(ApiResponse.error('المسار غير موجود', 'NOT_FOUND', req.path));
 });
 
 // Start server
 app.listen(port, () => {
-  logger.info(`🔄 Server running at http://localhost:${port}`);
-  logger.info('📊 University Certificate System is ready for use');
+  logger.info(`🔄 الخادم يعمل على http://localhost:${port}`);
+  logger.info('📊 نظام الشهادات الجامعية جاهز للاستخدام');
 });
 
 export default app;

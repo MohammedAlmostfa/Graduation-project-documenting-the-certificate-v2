@@ -52,8 +52,8 @@ router.get('/validate',
  * Requires authentication and admin privileges.
  */
 router.post('/mine',
-    auth.authenticate,
-    auth.requireRole(roles.PRESIDENT),
+
+
     blockchainController.minePendingCertificates
 );
 

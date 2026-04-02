@@ -17,34 +17,34 @@ export class ValidationService {
             certificateData.student?.email ||
             certificateData.student?.studentEmail;
 
-        if (!nameVal || !String(nameVal).trim()) errors.push('Student name is required');
-        if (!idVal || !String(idVal).trim()) errors.push('Student ID is required');
+        if (!nameVal || !String(nameVal).trim()) errors.push('اسم الطالب مطلوب');
+        if (!idVal || !String(idVal).trim()) errors.push('معرّف الطالب مطلوب');
 
         if (!emailVal || !String(emailVal).trim()) {
-            errors.push('Student email is required');
+            errors.push('البريد الإلكتروني للطالب مطلوب');
         } else if (!this.isValidEmail(emailVal)) {
-            errors.push('Invalid email format');
+            errors.push('تنسيق البريد الإلكتروني غير صالح');
         }
 
-        if (!certificateData.major || !String(certificateData.major).trim()) errors.push('Major is required');
+        if (!certificateData.major || !String(certificateData.major).trim()) errors.push('التخصص مطلوب');
 
         if (!certificateData.graduationDate) {
-            errors.push('Graduation date is required');
+            errors.push('تاريخ التخرج مطلوب');
         } else if (!this.validateDate(certificateData.graduationDate)) {
-            errors.push('Invalid graduation date');
+            errors.push('تاريخ التخرج غير صالح');
         }
 
         if (!certificateData.dateOfBirth) {
-            errors.push('Date of birth is required');
+            errors.push('تاريخ الميلاد مطلوب');
         } else if (!this.validateDate(certificateData.dateOfBirth)) {
-            errors.push('Invalid date of birth');
+            errors.push('تاريخ الميلاد غير صالح');
         }
 
         if (!this.validateGPA(certificateData.gpa)) {
-            errors.push('GPA must be between 60 and 99');
+            errors.push('يجب أن يكون المعدل بين 60 و 99');
         }
 
-        if (!certificateData.nationality || !String(certificateData.nationality).trim()) errors.push('Nationality is required');
+        if (!certificateData.nationality || !String(certificateData.nationality).trim()) errors.push('الجنسية مطلوبة');
 
         return {
             isValid: errors.length === 0,
@@ -57,28 +57,28 @@ export class ValidationService {
         const errors = [];
 
         if (!userData.username || !String(userData.username).trim()) {
-            errors.push('Username is required');
+            errors.push('اسم المستخدم مطلوب');
         } else if (userData.username.length < 3) {
-            errors.push('Username must be at least 3 characters');
+            errors.push('يجب أن يكون اسم المستخدم 3 أحرف على الأقل');
         }
 
         if (!userData.email || !String(userData.email).trim()) {
-            errors.push('Email is required');
+            errors.push('البريد الإلكتروني مطلوب');
         } else if (!this.isValidEmail(userData.email)) {
-            errors.push('Invalid email format');
+            errors.push('تنسيق البريد الإلكتروني غير صالح');
         }
 
         if (!userData.password || !String(userData.password).trim()) {
-            errors.push('Password is required');
+            errors.push('كلمة المرور مطلوبة');
         } else if (userData.password.length < 6) {
-            errors.push('Password must be at least 6 characters');
+            errors.push('يجب أن تكون كلمة المرور 6 أحرف على الأقل');
         }
 
         if (!userData.role || !['officer', 'dean', 'president', 'admin'].includes(userData.role)) {
-            errors.push('Invalid role');
+            errors.push('دور غير صالح');
         }
 
-        if (!userData.department || (typeof userData.department === 'string' && !userData.department.trim())) errors.push('Department is required');
+        if (!userData.department || (typeof userData.department === 'string' && !userData.department.trim())) errors.push('القسم مطلوب');
 
         return {
             isValid: errors.length === 0,

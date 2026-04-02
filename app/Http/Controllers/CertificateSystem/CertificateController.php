@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\CertificateSystem;
 
 use App\Http\Controllers\Controller;
-use App\Services\CertificateSystem\CertificateService;
 use App\Http\Requests\CertificateFormRequest\IssueCertificateRequest;
+use App\Services\CertificateSystem\CertificateService;
+use Illuminate\Support\Facades\Log;
 
 use function Illuminate\Log\log;
 
