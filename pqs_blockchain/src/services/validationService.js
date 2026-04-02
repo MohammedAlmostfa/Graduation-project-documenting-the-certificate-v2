@@ -99,7 +99,7 @@ export class ValidationService {
         return nationalIdRegex.test(String(nationalId).trim());
     }
 
-    /** Validate GPA (0.0–4.0). */
+        /** Validate GPA is between 60 and 99. */
     validateGPA(gpa) {
         if (gpa === undefined || gpa === null) return true;
         const numericGPA = parseFloat(gpa);

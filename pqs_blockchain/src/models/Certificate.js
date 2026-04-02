@@ -278,10 +278,15 @@ export class Certificate {
          * Return certificate for API responses (no signatures)
          */
         toPublicJSON() {
+            // Return only name and email in student object
+            const { name, email, ...rest } = this.student || {};
             return {
                 id: this.id,
                 certificateNumber: this.certificateNumber,
-                student: this.student,
+
+                    name: name || null,
+                    email: email || null,
+
                 issueDate: this.issueDate,
                 status: this.status,
                 certificateHash: this.certificateHash,

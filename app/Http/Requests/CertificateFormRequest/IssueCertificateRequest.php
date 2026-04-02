@@ -23,7 +23,7 @@ class IssueCertificateRequest extends FormRequest
             'studentId'       => 'required|string|max:50',
 
             'graduationDate'  => 'required|date',
-            'gpa'             => 'required|numeric|min:2|max:4',
+            'gpa'             => 'required|numeric|min:60|max:90',
             'certificateType' => 'required|string|max:100',
             'department_id'      => 'required|integer|exists:departments,id',
             'dateOfBirth'     => 'required|date',
