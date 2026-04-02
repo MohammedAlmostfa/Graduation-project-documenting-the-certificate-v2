@@ -41,7 +41,7 @@ export class ValidationService {
         }
 
         if (!this.validateGPA(certificateData.gpa)) {
-            errors.push('GPA must be between 0 and 4');
+            errors.push('GPA must be between 60 and 99');
         }
 
         if (!certificateData.nationality || !String(certificateData.nationality).trim()) errors.push('Nationality is required');
@@ -103,7 +103,7 @@ export class ValidationService {
     validateGPA(gpa) {
         if (gpa === undefined || gpa === null) return true;
         const numericGPA = parseFloat(gpa);
-        return !isNaN(numericGPA) && numericGPA >= 0.0 && numericGPA <= 4.0;
+        return !isNaN(numericGPA) && numericGPA >= 60 && numericGPA <= 99;
     }
 
     /** Validate date format. */

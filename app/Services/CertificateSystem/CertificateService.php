@@ -4,7 +4,9 @@ namespace App\Services\CertificateSystem;
 
 use App\Services\Service;
 use App\Models\Department;
+
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Service class for interacting with the Certificate System API.
@@ -31,7 +33,7 @@ class CertificateService extends Service
 
         // Send request to issue a certificate
         $response = $this->api->makeRequest('POST', '/certificates', $data);
-
+        Log::error($data);
         // Return formatted response
         return $this->formatResponse($response, $response['data'] ?? null);
     }
@@ -100,12 +102,12 @@ class CertificateService extends Service
         $signerRole = null;
 
         // Determine the user's role
-      foreach ($allowedRoles as $role) {
-    if ($user->role == $role) {
-        $signerRole = $role;
-        break;
-    }
-}
+        foreach ($allowedRoles as $role) {
+            if ($user->role == $role) {
+                $signerRole = $role;
+                break;
+            }
+        }
 
         // If user role is not authorized
         if (!$signerRole) {

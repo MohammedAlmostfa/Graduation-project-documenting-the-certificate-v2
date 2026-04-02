@@ -22,7 +22,7 @@ class ApiHelper
     {
         try {
             $request = Http::timeout($this->timeout)->withHeaders([
-                'x-user-id' => Auth::user()->id,
+                'x-user-id' => Auth::user()->id ?? 0 ,
             ]);
 
 
