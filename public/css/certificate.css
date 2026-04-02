@@ -22,7 +22,11 @@ body {
     align-items: flex-start;
     padding: 20px;
 }
-
+#studentDetails {
+    display: block;
+    line-height: 1.8;
+    white-space: normal;
+}
 .certificate-container {
     width: 1200px;
     height: 700px;
@@ -35,6 +39,17 @@ body {
     margin: 20px auto;
 }
 
+.opening-text {
+    font-size: 15px;
+    margin-bottom: 12px;  /* زيادة قليلة */
+    color: #2c2c2c;
+    line-height: 1.8;     /* زيادة المسافة بين الأسطر */
+}
+
+/* حذف major-section و major-text إذا لم تعد مستخدمة */
+.major-section {
+    display: none;  /* أو احذفها نهائياً من CSS */
+}
 .top {
     display: flex;
     flex-direction: row;
@@ -154,6 +169,7 @@ body {
     flex-direction: column;
     justify-content: space-between;
     height: 100%;
+
 }
 
 .document-header {
@@ -239,6 +255,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
+      margin-right: 30px;
 }
 
 .opening-text {

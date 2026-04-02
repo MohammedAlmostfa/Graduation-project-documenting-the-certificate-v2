@@ -21,11 +21,10 @@ class IssueCertificateRequest extends FormRequest
             'studentName'     => 'required|string|max:255',
             'studentEmail'    => 'required|email|max:255',
             'studentId'       => 'required|string|max:50',
-
             'graduationDate'  => 'required|date',
             'gpa'             => 'required|numeric|min:60|max:90',
             'certificateType' => 'required|string|max:100',
-            'department_id'      => 'required|integer|exists:departments,id',
+            'department_id'     => 'required|integer|exists:departments,id',
             'dateOfBirth'     => 'required|date',
             'nationality'     => 'required|string|max:100',
             'graduationCycle' => ['required', new Enum(GraduationCycle::class)],

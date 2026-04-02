@@ -32,7 +32,9 @@ document.getElementById('verifyForm').addEventListener('submit', async (e) => {
         console.log('data', data);
 
         if (data.status === 'VALID') {
-            localStorage.setItem('certificateData', JSON.stringify(data));
+            // 🔑 تخزين البيانات الكاملة في sessionStorage للنقل
+            sessionStorage.setItem('certificateData', JSON.stringify(data));
+            sessionStorage.setItem('certificateNumber', certNumber);
         }
 
         displayResult(data, certNumber);
@@ -88,15 +90,15 @@ function displayResult(data, certNumber) {
                 <div class="details-grid">
                     <div class="detail-item">
                         <div class="detail-label">اسم الطالب</div>
-                        <div class="detail-value">${student?.studentName || 'غير متوفر'}</div>
+                        <div class="detail-value">${student?.name || 'غير متوفر'}</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">الرقم الجامعي</div>
-                        <div class="detail-value">${student?.studentId || 'غير متوفر'}</div>
+                        <div class="detail-value">${student?.id || 'غير متوفر'}</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">البريد الإلكتروني</div>
-                        <div class="detail-value">${student?.studentEmail || 'غير متوفر'}</div>
+                        <div class="detail-value">${student?.email || 'غير متوفر'}</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">الجنسية</div>
@@ -201,28 +203,55 @@ function displayResult(data, certNumber) {
 }
 
 // ============================================================
-// Helpers
+// showCertificate — الوظيفة المحسّنة اللي تأخذ البيانات معها
 // ============================================================
 function showCertificate() {
-    const certData = localStorage.getItem('certificateData');
+    const certData = sessionStorage.getItem('certificateData');
+    const certNumber = sessionStorage.getItem('certificateNumber');
+
     if (certData) {
+        // ✅ الخيار 1: فتح صفحة جديدة مع البيانات
+        // يمكن استقبال البيانات من sessionStorage في الصفحة الأخرى
         window.location.href = 'http://127.0.0.1:8000/certificate';
+
+        // ✅ الخيار 2 (بديل): إذا كنت تريد URL مع البيانات كـ query string
+        // تفكيك البيانات وإضافتها للـ URL:
+        // const data = JSON.parse(certData);
+        // const params = new URLSearchParams({
+        //     certNumber: certNumber,
+        //     studentName: data.certificate.student.studentName,
+        //     studentId: data.certificate.student.studentId,
+        //     // أضف ما تحتاج
+        // });
+        // window.location.href = `http://127.0.0.1:8000/certificate?${params.toString()}`;
     } else {
         alert('لم يتم العثور على بيانات الشهادة');
     }
 }
 
+// ============================================================
+// Helpers — دوال مساعدة
+// ============================================================
+
+/**
+ * تنسيق التاريخ بصيغة عربية
+ */
 function formatDate(dateString) {
     if (!dateString) return 'غير متوفر';
     try {
         return new Date(dateString).toLocaleDateString('ar-SY', {
-            year: 'numeric', month: 'long', day: 'numeric'
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
     } catch {
         return dateString;
     }
 }
 
+/**
+ * ترجمة أدوار التوقيع
+ */
 function getRoleLabel(role) {
     const labels = {
         'officer':    'موظف شؤون الطلاب',
@@ -234,14 +263,33 @@ function getRoleLabel(role) {
     return labels[role] || role;
 }
 
+/**
+ * نسخ النص للحافظة
+ */
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text)
         .then(() => alert('تم نسخ رقم المعاملة إلى الحافظة'))
         .catch(err => console.error('فشل في النسخ: ', err));
 }
 
+/**
+ * حدث النقر على العناصر القابلة للنسخ
+ */
 document.addEventListener('click', function(e) {
     if (e.target.classList.contains('blockchain-value')) {
         copyToClipboard(e.target.textContent);
     }
 });
+
+// ============================================================
+// دالة إضافية: استخراج البيانات من sessionStorage في أي مكان
+// ============================================================
+function getCertificateData() {
+    const certData = sessionStorage.getItem('certificateData');
+    if (certData) {
+        return JSON.parse(certData);
+    }
+    return null;
+}
+
+
