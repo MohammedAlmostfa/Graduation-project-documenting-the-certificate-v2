@@ -13,10 +13,8 @@ return new class extends Migration
     {
         Schema::create('majors', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('college_id')
-                ->constrained('colleges')
-                ->onDelete('cascade');
-            $table->string('name');
+
+            $table->string('name')->unique();
             $table->text('description')->nullable();
         });
     }

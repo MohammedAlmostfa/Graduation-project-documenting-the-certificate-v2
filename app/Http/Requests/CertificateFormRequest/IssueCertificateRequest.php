@@ -24,7 +24,7 @@ class IssueCertificateRequest extends FormRequest
             'graduationDate'  => 'required|date',
             'gpa'             => 'required|numeric|min:60|max:90',
             'certificateType' => 'required|string|max:100',
-            'department_id'     => 'required|integer|exists:departments,id',
+            'major_id'     => 'required|integer|exists:majors,id',
             'dateOfBirth'     => 'required|date',
             'nationality'     => 'required|string|max:100',
             'graduationCycle' => ['required', new Enum(GraduationCycle::class)],

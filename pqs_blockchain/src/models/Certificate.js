@@ -126,16 +126,9 @@ export class Certificate {
      * Convert academic major to faculty code
      */
     getFacultyFromMajor(major) {
-        const facultyMap = {
-            'علوم الحاسب': 'CS',
-            'هندسة البرمجيات': 'CS',
-            'طب عام': 'MED',
-            'هندسة مدنية': 'ENG',
-            'فيزياء': 'SCI',
-            'أدب عربي': 'ARTS'
-        };
 
-        return facultyMap[major] || 'CS';
+
+         return ' كلية الهندسة الميكانيكية والكهربائي';
     }
 
     /**

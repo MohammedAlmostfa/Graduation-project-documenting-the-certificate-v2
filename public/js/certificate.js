@@ -160,7 +160,7 @@ function populateCertificateDisplay() {
 // ============================================================
 function generateCertificateTitle(certificateType, major) {
     const typeMap = {
-        'إجازة': `إجازة في ${major}`,
+        'بكالوريوس': `إجازة في ${major}`,
         'ماجستير': `ماجستير في ${major}`,
         'دكتوراه': `دكتوراه في ${major}`,
         'دبلوم': `دبلوم في ${major}`
