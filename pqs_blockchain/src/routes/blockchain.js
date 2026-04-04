@@ -49,7 +49,6 @@ router.get('/validate',
  * Mining
  * ------
  * Mine pending certificates into a new block.
- * Requires authentication and admin privileges.
  */
 router.post('/mine',
 
@@ -79,7 +78,7 @@ router.get('/block/:blockNumber',
  * All Blocks
  * ----------
  * Get all blocks in the blockchain.
- * Requires authentication and officer role.
+
  */
 router.get('/blocks',
 

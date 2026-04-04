@@ -106,6 +106,13 @@ export class ValidationService {
         return !isNaN(numericGPA) && numericGPA >= 60 && numericGPA <= 99;
     }
 
+    /** Validate certificate number format. */
+    validateCertificateNumberFormat(certificateNumber) {
+        if (!certificateNumber || typeof certificateNumber !== 'string') return false;
+        const certNumPattern = /^CERT-\d{4}-[A-Z0-9]+$/i;
+        return certNumPattern.test(certificateNumber.trim());
+    }
+
     /** Validate date format. */
     validateDate(dateString) {
         if (!dateString) return false;

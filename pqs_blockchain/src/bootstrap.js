@@ -1,9 +1,7 @@
-// Centralized bootstrap for app-level singletons / wiring
+// Centralized bootstrap for app-level singletons and initialization.
 // -------------------------------------------------------
-// This module instantiates and wires together repositories and services.
-// Controllers and routes can import from here to access shared singletons.
-// This keeps wiring centralized and makes it easier to replace with a true
-// dependency injection (DI) container later.
+// This module instantiates services and then initializes them in a
+// controlled startup sequence to avoid side effects during import.
 
 import { CertificateService } from './services/certificateService.js';
 import { KeyService } from './services/keyService.js';
@@ -16,29 +14,19 @@ import { certificateRepository } from './repositories/certificateRepository.js';
 import { userRepository } from './repositories/userRepository.js';
 import { keyRepository } from './repositories/keyRepository.js';
 import { blockchainRepository } from './repositories/blockchainRepository.js';
+import { logger } from './utils/logger.js';
 
 // -------------------------------------------------------
-// Instantiate lower-level services first
+// Instantiate shared singletons
 // -------------------------------------------------------
-
-// KeyManagementService handles cryptographic key operations
 const keyManagementService = new KeyManagementService({ repo: keyRepository });
-
-// KeyService depends on userRepository and keyManagementService
 const keyService = new KeyService({ repo: userRepository, keyManagementService });
-
-// CertificateService depends on certificateRepository, keyService, and keyManagementService
 const certificateService = new CertificateService({
   repo: certificateRepository,
   keyService,
   keyManagementService
 });
-
-// BlockchainService depends on blockchainRepository
-// (no circular dependency at construction time)
 const blockchainService = new BlockchainService({ repo: blockchainRepository });
-
-// CertificateValidationService validates certificates against blockchain
 const certificateValidationService = new CertificateValidationService({
   blockchainService,
   certificateRepo: certificateRepository,
@@ -46,32 +34,32 @@ const certificateValidationService = new CertificateValidationService({
 });
 
 // -------------------------------------------------------
-// Wire cross-references (avoid constructor-time circular imports)
+// Wire cross dependencies.
 // -------------------------------------------------------
 blockchainService.certificateService = certificateService;
 certificateService.blockchainService = blockchainService;
 certificateService.certificateValidationService = certificateValidationService;
 
-// WHY: initialize() يضمن ترتيباً متسلسلاً صارماً
-//      لا يمكن تشغيل syncPendingFromDB قبل اكتمال loadBlockchain
-(async () => {
+export const initServices = async () => {
   try {
+    await keyService.initDefaultUsers();
     await blockchainService.initialize();
-    if (typeof logger !== 'undefined') {
-      logger.info('✅ BlockchainService initialized successfully');
-    }
-  } catch (err) {
-    if (typeof logger !== 'undefined') {
-      logger.error(`❌ BlockchainService initialization failed: ${err.message}`);
-    }
-    // WHY: نُسجّل الخطأ لكن لا نوقف التطبيق
-    //      البلوك تشين يمكن إعادة تهيئته لاحقاً
+    logger.info('✅ Application services initialized successfully');
+  } catch (error) {
+    logger.error(`❌ Service initialization failed: ${error.message}`, error);
+    throw error;
   }
-})();
+};
 
-// -------------------------------------------------------
-// Export singletons for use across the app
-// -------------------------------------------------------
+export const services = {
+  certificateService,
+  keyService,
+  keyManagementService,
+  blockchainService,
+  certificateValidationService,
+  validationService
+};
+
 export {
   certificateService,
   keyService,

@@ -6,6 +6,8 @@ import {
     ApiResponse
 } from '../utils/apiResponse.js';
 import { asyncWrapper } from '../utils/asyncWrapper.js';
+import { CertificateIdRequest } from '../requests/CertificateIdRequest.js';
+import { BlockNumberRequest } from '../requests/BlockNumberRequest.js';
 
 /**
  * Blockchain Controller
@@ -49,7 +51,8 @@ export const blockchainController = {
      * Get block details for a certificate.
      */
     getCertificateBlockInfo: asyncWrapper(async (req, res) => {
-            const { certificateId } = req.params;
+            const certIdRequest = new CertificateIdRequest(req.params.certificateId);
+            const certificateId = certIdRequest.validate();
             const blockInfo = await blockchainService.getCertificateBlockInfo(certificateId);
             res.json(ApiResponse.success('تم جلب معلومات بلوك الشهادة بنجاح', { certificateId, blockInfo }));
     }),
@@ -58,8 +61,9 @@ export const blockchainController = {
      * Get a block by block number.
      */
     getBlock: asyncWrapper(async (req, res) => {
-            const { blockNumber } = req.params;
-            const block = await blockchainService.getBlock(parseInt(blockNumber));
+            const blockNumRequest = new BlockNumberRequest(req.params.blockNumber);
+            const blockNumber = blockNumRequest.validate();
+            const block = await blockchainService.getBlock(blockNumber);
             res.json(ApiResponse.success('تم جلب البلوك بنجاح', { block }));
     }),
 

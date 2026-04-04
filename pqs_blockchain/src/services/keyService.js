@@ -1,7 +1,8 @@
+import bcrypt from 'bcryptjs';
 import { User } from '../models/User.js';
 import { oqsCrypto } from '../utils/crypto-oqs.js';
 import { userRepository } from '../repositories/userRepository.js';
-import { roles } from '../config/security.js';
+import { roles, securityConfig } from '../config/security.js';
 import { logger } from '../utils/logger.js';
 import { NotFoundError, ValidationError } from '../utils/errors.js';
 
@@ -12,25 +13,20 @@ export class KeyService {
     constructor({ repo, keyManagementService } = {}) {
         this.repo = repo || userRepository;
         this.keyManagementService = keyManagementService;
-        this.initDefaultUsers();
     }
 
     /** Initialize default users if none exist. */
     async initDefaultUsers() {
-        try {
-            const existingUsers = await this.getAllUsers();
-            if (existingUsers.length === 0) {
-                await this.createDefaultUsers();
-                logger.info('Default users created');
-            }
-        } catch (error) {
-            logger.error(`Error initializing default users: ${error.message}`);
+        const existingUsers = await this.getAllUsers();
+        if (existingUsers.length === 0) {
+            await this.createDefaultUsers();
+            logger.info('Default users created');
         }
     }
 
     /** Create default system users. */
     async createDefaultUsers() {
-        const defaultPassword = '$2y$12$FnsajJtvuWq4PmoGXzReS.mLcY00NmRm3rB3.GsBT4pnmmTLUxHgG';
+        const defaultPassword = process.env.DEFAULT_USER_PASSWORD || 'University@2026';
         const defaultUsers = [
             { username: 'certificate_officer', email: 'officer@university.edu', password: defaultPassword, role: roles.OFFICER, department: 'HMK' },
             { username: 'faculty_dean', email: 'dean@university.edu', password: defaultPassword, role: roles.DEAN, department: 'HMK' },
@@ -56,25 +52,26 @@ export class KeyService {
             if (existingUser) throw new ValidationError('User already exists');
 
             const keyPair = await oqsCrypto.generateKeyPair();
+            const hashedPassword = await bcrypt.hash(password, securityConfig.password.saltRounds);
 
             const user = new User({
                 username,
                 email,
-                password, // Store password as plain text (no hashing)
+                password: hashedPassword,
                 role,
                 department,
                 publicKey: oqsCrypto.serializePublicKey(keyPair.publicKey),
                 algorithm: keyPair.algorithm
             });
 
-            await this.repo.saveUser(user.toSafeJSON());
+            await this.repo.saveUser(user.toDatabaseJSON());
             await this.keyManagementService.storeKeyPair(user.id, keyPair);
 
             logger.info(`New user created: ${username}`);
 
             return {
                 user: user.toSafeJSON(),
-                keyPair: { publicKey: keyPair.publicKey, privateKey: keyPair.privateKey }
+                privateKey: keyPair.privateKey
             };
         } catch (error) {
             logger.error(`Error creating user: ${error.message}`);

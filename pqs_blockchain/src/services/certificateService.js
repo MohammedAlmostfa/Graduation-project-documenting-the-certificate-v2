@@ -92,42 +92,6 @@ export class CertificateService {
         }
     }
 
-    async validateCertificateById(certificateId) {
-        try {
-            const certificateData = await this.repo.getCertificate(certificateId);
-            if (!certificateData) throw new NotFoundError('Certificate not found');
-
-            const certInstance = new Certificate(certificateData);
-
-            if (!this.certificateValidationService) {
-                return {
-                    status: 'ERROR',
-                    message: 'Validation service not available'
-                };
-            }
-
-            const validationResult = await this.certificateValidationService.completeCertificateValidation(certificateId);
-
-            if (validationResult.status === 'VALID') {
-                return {
-                    status: 'VALID',
-                    message: 'الشهادة صحيحة وموثوقة',
-                    certificate: certInstance.toJSON(),
-                    validationDetails: validationResult.details
-                };
-            } else {
-                return validationResult;
-            }
-        } catch (error) {
-            logger.error(`Error validating certificate by ID: ${error.message}`);
-            return {
-                status: 'ERROR',
-                message: 'Error validating certificate',
-                detail: error.message
-            };
-        }
-    }
-
     async validateSignatureOrderWithRoles(certificate, newRole) {
         const expectedOrder = ['officer', 'dean', 'president'];
         const currentSigs = certificate.signatures || [];
@@ -346,17 +310,15 @@ export class CertificateService {
         try {
             if (!user) throw new Error('User is required for signing');
 
-            const certificate = await this.getCertificate(certificateId);
-            const certInstance = new Certificate(certificate);
-
-            // Sign the immutable certificateHash, not reconstructed data
-            const dataToSign = certInstance.certificateHash;
-
             if (!this.keyService) throw new Error('Key service not wired');
 
+            const certificateData = await this.repo.getCertificate(certificateId);
+            if (!certificateData) throw new NotFoundError('Certificate not found');
+
+            const certificate = new Certificate(certificateData);
+            const dataToSign = certificate.certificateHash;
             const signatureResult = await this.keyService.signDataWithUserKey(user.id, dataToSign);
 
-            // Only signature and signerId are stored
             const signatureData = {
                 signature: signatureResult.signature,
                 signerId: user.id
@@ -370,69 +332,27 @@ export class CertificateService {
         }
     }
 
-    /**
-     * Updates a certificate with blockchain transaction info after mining.
-     * blockId and blockIndex are required and strictly validated against the blockchain table.
-     * The transaction hash is always recomputed from the actual DB record.
-     */
-    async updateCertificateBlockchainInfo(certificateId, transactionHash, blockId, blockIndex) {
-        try {
-            if (blockId === undefined || blockId === null) {
-                throw new Error('blockId is REQUIRED and cannot be null or undefined');
-            }
+    async signPresidentAndQueueForBlockchain(certificateId, user) {
+        const certificate = await this.getCertificate(certificateId);
 
-            if (typeof blockId !== 'number' || blockId <= 0) {
-                throw new Error(`blockId must be a positive number, got: ${blockId}`);
-            }
-
-            if (blockIndex === undefined || blockIndex === null) {
-                throw new Error('blockIndex is REQUIRED and cannot be null or undefined');
-            }
-
-            if (typeof blockIndex !== 'number' || blockIndex < 0) {
-                throw new Error(`blockIndex must be a non-negative number, got: ${blockIndex}`);
-            }
-
-            const certificateData = await this.repo.getCertificate(certificateId);
-            if (!certificateData) throw new NotFoundError('Certificate not found');
-
-            if (!this.blockchainService || !this.blockchainService.repo) {
-                throw new Error('blockchainService not available for block verification');
-            }
-
-            const blockRow = await this.blockchainService.repo.getBlockById(blockId);
-            if (!blockRow) {
-                throw new Error(`Referenced block ID ${blockId} does not exist in blockchain table`);
-            }
-
-            if (blockRow.index !== blockIndex) {
-                throw new Error(
-                    `Block mismatch: blockId ${blockId} has index ${blockRow.index} ` +
-                    `but provided blockIndex is ${blockIndex}`
-                );
-            }
-
-            // Always compute the transaction hash from the actual DB record
-            const computedHash = oqsCrypto.hashData(JSON.stringify(certificateData));
-
-            const certificate = new Certificate(certificateData);
-            certificate.transactionHash = computedHash;
-            certificate.blockId = blockId;
-            certificate.blockIndex = blockIndex;
-            certificate.status = certificateStatus.COMPLETED;
-
-            await this.repo.saveCertificate(certificate.toJSON());
-
-            logger.info(`✅ Updated certificate ${certificateId} with blockchain info:`);
-            logger.info(`   Block ID: ${blockId}, Block Index: ${blockIndex}`);
-            logger.info(`   Transaction Hash: ${computedHash}`);
-            logger.info(`   Status: COMPLETED`);
-
-            return certificate.toJSON();
-        } catch (error) {
-            logger.error(`❌ Error updating certificate blockchain info: ${error.message}`);
-            throw error;
+        if (certificate.status !== certificateStatus.DEAN_SIGNED) {
+            throw new ValidationError('يجب توقيع الشهادة من العميد قبل الرئيس');
         }
+
+        await this.signCertificate(certificateId, roles.PRESIDENT, user);
+        const updatedCertificate = await this.setCertificateStatus(certificateId, certificateStatus.BLOCKCHAIN_ADDED);
+
+        try {
+            if (this.blockchainService && typeof this.blockchainService.enqueueCertificateById === 'function') {
+                await this.blockchainService.enqueueCertificateById(certificateId);
+            } else if (this.blockchainService && typeof this.blockchainService.syncPendingFromDB === 'function') {
+                await this.blockchainService.syncPendingFromDB();
+            }
+        } catch (err) {
+            logger.error(`❌ Failed to enqueue certificate for mining: ${err.message}`);
+        }
+
+        return updatedCertificate;
     }
 
     /**

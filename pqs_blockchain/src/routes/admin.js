@@ -46,10 +46,10 @@ router.use(rateLimit(15 * 60 * 1000, 50));
  * Validation: User data (username, email, role, department)
  */
 router.post('/users',
-       auth.authenticate,
-        auth.requireRole(roles.PRESIDENT),
-  validation.validateUser,
-  adminController.createUser
+    auth.authenticate,
+    auth.requireRole(roles.ADMIN),
+    validation.validateUser,
+    adminController.createUser
 );
 
 /**
@@ -59,9 +59,9 @@ router.post('/users',
  * Requires: Admin role
  */
 router.get('/users',
-       auth.authenticate,
-        auth.requireRole(roles.PRESIDENT),
-  adminController.getAllUsers
+    auth.authenticate,
+    auth.requireRole(roles.ADMIN),
+    adminController.getAllUsers
 );
 
 /**
@@ -72,9 +72,9 @@ router.get('/users',
  * Validation: User ID in params
  */
 router.get('/users/:userId',
-       auth.authenticate,
-        auth.requireRole(roles.PRESIDENT),
-  adminController.getUser
+    auth.authenticate,
+    auth.requireRole(roles.ADMIN),
+    adminController.getUser
 );
 
 /**
@@ -92,9 +92,9 @@ router.get('/users/:userId',
  * Returns: Certificate stats, blockchain stats, user stats, system uptime
  */
 router.get('/stats',
-       auth.authenticate,
-        auth.requireRole(roles.PRESIDENT),
-  adminController.getSystemStats
+    auth.authenticate,
+    auth.requireRole(roles.ADMIN),
+    adminController.getSystemStats
 );
 
 /**
@@ -115,14 +115,18 @@ router.get('/stats',
  * GET is used here for testing purposes only
  */
 router.get('/backup',
-  adminController.backupData
+    auth.authenticate,
+    auth.requireRole(roles.ADMIN),
+    adminController.backupData
 );
 
 /**
  * Alternative POST endpoint for backup (recommended for production)
  */
 router.post('/backup',
-  adminController.backupData
+    auth.authenticate,
+    auth.requireRole(roles.ADMIN),
+    adminController.backupData
 );
 
 export default router;

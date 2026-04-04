@@ -11,6 +11,8 @@ import {
     ApiResponse
 } from '../utils/apiResponse.js';
 import { asyncWrapper } from '../utils/asyncWrapper.js';
+import { CreateUserRequest } from '../requests/CreateUserRequest.js';
+import { UserIdRequest } from '../requests/UserIdRequest.js';
 
 /**
  * Admin Controller
@@ -30,15 +32,8 @@ export const adminController = {
      * Admin permission required.
      */
     createUser: asyncWrapper(async (req, res) => {
-            const userData = req.body;
-
-            // Validate input data
-            const validation = validationService.validateUserData(userData);
-            if (!validation.isValid) {
-                return res.status(400).json(
-                    ApiResponse.error('بيانات المستخدم غير صالحة', 'VALIDATION_ERROR', validation.errors)
-                );
-            }
+            const request = new CreateUserRequest(req.body);
+            const userData = request.validate();
 
             const result = await keyService.createUser(
                 userData.username,
@@ -73,14 +68,8 @@ export const adminController = {
      * Admin permission required.
      */
     getUser: asyncWrapper(async (req, res) => {
-            const { userId } = req.params;
-
-            // Check if userId exists
-            if (!userId || userId.trim() === '') {
-                return res.status(400).json(
-                    ApiResponse.error('معرّف المستخدم مطلوب', 'VALIDATION_ERROR', null)
-                );
-            }
+            const userIdRequest = new UserIdRequest(req.params.userId);
+            const userId = userIdRequest.validate();
 
             const user = await keyService.getUser(userId);
             res.json(ApiResponse.success('تم جلب بيانات المستخدم بنجاح', user.toSafeJSON()));

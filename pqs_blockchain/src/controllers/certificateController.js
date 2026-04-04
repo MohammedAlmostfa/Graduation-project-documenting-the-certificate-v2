@@ -6,10 +6,15 @@ import {
 } from "../bootstrap.js";
 import { logger } from "../utils/logger.js";
 import { ApiResponse } from "../utils/apiResponse.js";
+import { ValidationError } from "../utils/errors.js";
 import { User } from "../models/User.js";
 import { Certificate } from "../models/Certificate.js";
 import { asyncWrapper } from "../utils/asyncWrapper.js";
 import { certificateStatus } from "../config/security.js";
+import { CreateCertificateRequest } from "../requests/CreateCertificateRequest.js";
+import { CertificateIdRequest } from "../requests/CertificateIdRequest.js";
+import { CertificateNumberRequest } from "../requests/CertificateNumberRequest.js";
+import { StatusRequest } from "../requests/StatusRequest.js";
 
 /**
  * Certificate Controller
@@ -29,16 +34,9 @@ export const certificateController = {
      * Officer permission required.
      */
     createCertificate: asyncWrapper(async (req, res) => {
-            const certificateData = req.body;
+            const request = new CreateCertificateRequest(req.body);
+            const certificateData = request.validate();
             const user = req.user;
-
-            // Validate certificate data
-            const validation = validationService.validateCertificateData(certificateData);
-            if (!validation.isValid) {
-                return res.status(400).json(
-                    ApiResponse.error('Invalid certificate data', 'VALIDATION_ERROR', validation.errors)
-                );
-            }
 
             const certificate = await certificateService.createAndSignCertificate(
                 certificateData,
@@ -54,15 +52,9 @@ export const certificateController = {
      * Dean permission required.
      */
     addDeanSignature: asyncWrapper(async (req, res) => {
-            const { certificateId } = req.params;
+            const certIdRequest = new CertificateIdRequest(req.params.certificateId);
+            const certificateId = certIdRequest.validate();
             const user = req.user;
-
-            // Check certificate ID
-            if (!certificateId || certificateId.trim() === '') {
-                return res.status(400).json(
-                    ApiResponse.error('معرّف الشهادة مطلوب', 'VALIDATION_ERROR', null)
-                );
-            }
 
             const updatedCertificate = await certificateService.signCertificate(certificateId, "dean", user);
             const cert = new Certificate(updatedCertificate);
@@ -74,40 +66,11 @@ export const certificateController = {
      * President permission required.
      */
     addPresidentSignature: asyncWrapper(async (req, res) => {
-            const { certificateId } = req.params;
+            const certIdRequest = new CertificateIdRequest(req.params.certificateId);
+            const certificateId = certIdRequest.validate();
             const user = req.user;
 
-            // Check certificate ID
-            if (!certificateId || certificateId.trim() === '') {
-                return res.status(400).json(
-                    ApiResponse.error('معرّف الشهادة مطلوب', 'VALIDATION_ERROR', null)
-                );
-            }
-
-            // Ensure certificate is signed by dean first
-            const certificate = await certificateService.getCertificate(certificateId);
-            if (certificate.status !== certificateStatus.DEAN_SIGNED) {
-                return res.status(400).json(
-                    ApiResponse.error('يجب توقيع الشهادة من العميد قبل الرئيس', 'INVALID_STATE', null)
-                );
-            }
-
-            // Add president signature
-            await certificateService.signCertificate(certificateId, "president", user);
-
-            // Update status and prepare for blockchain
-            const updated = await certificateService.setCertificateStatus(certificateId, certificateStatus.BLOCKCHAIN_ADDED);
-
-            try {
-                if (blockchainService && typeof blockchainService.enqueueCertificateById === 'function') {
-                    await blockchainService.enqueueCertificateById(certificateId);
-                } else if (blockchainService && blockchainService.syncPendingFromDB) {
-                    await blockchainService.syncPendingFromDB();
-                }
-            } catch (err) {
-                logger.error(`❌ Failed to enqueue certificate for mining: ${err.message}`);
-            }
-
+            const updated = await certificateService.signPresidentAndQueueForBlockchain(certificateId, user);
             const cert = new Certificate(updated);
             res.json(ApiResponse.success("تمت إضافة توقيع الرئيس وتمت جدولة الشهادة للتعدين", cert.toPublicJSON()));
     }),
@@ -116,15 +79,9 @@ export const certificateController = {
      * Get a certificate by ID.
      */
     getCertificate: asyncWrapper(async (req, res) => {
-            const { id } = req.params;
-
-            if (!id || id.trim() === '') {
-                return res.status(400).json(
-                    ApiResponse.error('معرّف الشهادة مطلوب', 'VALIDATION_ERROR', null)
-                );
-            }
-
-            const certificate = await certificateService.getCertificatePublic(id);
+            const certIdRequest = new CertificateIdRequest(req.params.id);
+            const certificateId = certIdRequest.validate();
+            const certificate = await certificateService.getCertificatePublic(certificateId);
             res.json(ApiResponse.success("تم جلب الشهادة بنجاح", certificate));
     }),
 
@@ -132,25 +89,14 @@ export const certificateController = {
      * Validate a certificate.
      */
     validateCertificate: asyncWrapper(async (req, res) => {
-        const { certificateNumber } = req.params;
-        // تحقق من وجود certificateNumber وأنه نصي وغير فارغ
-        if (!certificateNumber || typeof certificateNumber !== 'string' || certificateNumber.trim() === '') {
-            return res.status(400).json(
-                ApiResponse.error('Certificate number is required', 'VALIDATION_ERROR', null)
-            );
-        }
-        // تحقق من أن certificateNumber يطابق النمط المتوقع (مثال: CERT-2026-)
-        const certNumPattern = /^CERT-\d{4}-[A-Z0-9]+$/i;
-        if (!certNumPattern.test(certificateNumber)) {
-            return res.status(400).json(
-                ApiResponse.error('Invalid certificate number format', 'VALIDATION_ERROR', null)
-            );
-        }
+        const certNumRequest = new CertificateNumberRequest(req.params.certificateNumber);
+        const certificateNumber = certNumRequest.validate();
+
         const validationResult = await certificateService.validateCertificateByNumber(certificateNumber);
-                if (validationResult.certificate) {
-                    validationResult.certificate = new Certificate(validationResult.certificate).toPublicJSON();
-                }
-                res.json(ApiResponse.success("نتيجة التحقق من الشهادة", validationResult));
+        if (validationResult.certificate) {
+            validationResult.certificate = new Certificate(validationResult.certificate).toPublicJSON();
+        }
+        res.json(ApiResponse.success("نتيجة التحقق من الشهادة", validationResult));
     }),
 
     /**
@@ -166,14 +112,8 @@ export const certificateController = {
      * Get certificates by status.
      */
     getCertificatesByStatus: asyncWrapper(async (req, res) => {
-            const { status } = req.params;
-
-            if (!status || status.trim() === '') {
-                return res.status(400).json(
-                    ApiResponse.error('معامل الحالة مطلوب', 'VALIDATION_ERROR', null)
-                );
-            }
-
+            const statusRequest = new StatusRequest(req.params.status);
+            const status = statusRequest.validate();
             const certificates = await certificateService.getCertificatesByStatus(status);
             const publicCerts = certificates.map(c => new Certificate(c).toPublicJSON());
             res.json(ApiResponse.success(`الشهادات بالحالة: ${status}`, { status, count: publicCerts.length, certificates: publicCerts }));

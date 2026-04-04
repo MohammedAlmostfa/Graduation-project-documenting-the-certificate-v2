@@ -2,7 +2,6 @@ import { logger } from "../utils/logger.js";
 import { keyService } from "../bootstrap.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { roles, roleHierarchy } from "../config/security.js";
-import { User } from "../models/User.js";
 
 /**
  * Authentication & Authorization Middleware
