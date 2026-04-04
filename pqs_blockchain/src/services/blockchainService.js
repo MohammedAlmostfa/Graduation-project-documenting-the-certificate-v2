@@ -1,17 +1,12 @@
 import { Blockchain } from '../models/Blockchain.js';
 import { Block } from '../models/Block.js';
+import { MerkleTree } from '../utils/merkleTree.js';
 import { logger } from '../utils/logger.js';
 import { blockchainRepository } from '../repositories/blockchainRepository.js';
 import { certificateStatus } from '../config/security.js';
 import { oqsCrypto } from '../utils/crypto-oqs.js';
 
 export class BlockchainService {
-    // Compute a single hash from multiple certificate hashes
-    _computeCertificatesHash(certHashArray) {
-        const sorted = [...certHashArray].filter(Boolean).sort();
-        return oqsCrypto.hashData(sorted.join('|'));
-    }
-
     constructor({ repo, certificateService } = {}) {
         this.repo = repo || blockchainRepository;
         this.blockchain = new Blockchain();
@@ -32,7 +27,7 @@ export class BlockchainService {
             if (savedChain && Array.isArray(savedChain.chain)) {
                 this.blockchain.chain = savedChain.chain.map(blockData => {
                     const block = Object.assign(new Block(), blockData);
-                    block.certificatesHash = blockData.certificatesHash || '';
+                    block.merkleRoot = blockData.merkleRoot || '';
                     return block;
                 });
                 this.blockchain.pendingCertificates = [];
@@ -97,20 +92,17 @@ export class BlockchainService {
     // Mine all pending certificates into a new block
     async minePendingCertificates() {
         try {
-            const result = this.blockchain.minePendingCertificates();
-            if (!result) {
-                logger.debug('No pending certificates to mine');
-                return null;
-            }
-
-            const { block, blockNumber, certificates } = result;
-            const blockHash = block.hash;
-
             if (!this.certificateService || !this.certificateService.repo) {
                 throw new Error('certificateService not available');
             }
 
-            const certificateIds = certificates.map(c => c.id);
+            const pendingCertificates = this.blockchain.pendingCertificates;
+            if (!pendingCertificates || pendingCertificates.length === 0) {
+                logger.debug('No pending certificates to mine');
+                return null;
+            }
+
+            const certificateIds = pendingCertificates.map(c => c.id);
             const freshCerts = [];
             for (const certId of certificateIds) {
                 try {
@@ -124,7 +116,21 @@ export class BlockchainService {
             if (freshCerts.length === 0) throw new Error('No certificate data for mining');
 
             const certHashes = freshCerts.map(c => c.certificateHash || '');
-            const certificatesHash = this._computeCertificatesHash(certHashes);
+            const merkleTree = new MerkleTree(certHashes);
+            const merkleRoot = merkleTree.getRoot();
+
+            if (!merkleRoot || merkleRoot === '') {
+                throw new Error('Invalid Merkle Root: cannot be empty');
+            }
+
+            const result = this.blockchain.minePendingCertificates(merkleRoot);
+            if (!result) {
+                logger.debug('No pending certificates to mine');
+                return null;
+            }
+
+            const { block, blockNumber, certificates } = result;
+            const blockHash = block.hash;
 
             let blockId = null;
             let updatedCertificates = [];
@@ -132,7 +138,7 @@ export class BlockchainService {
 
             try {
                 const atomicResult = await this.repo.minePendingCertificatesAtomic(
-                    block, certificates, certificatesHash,
+                    block, certificates, merkleRoot,
                     this.certificateService.repo, blockNumber
                 );
 
@@ -140,10 +146,8 @@ export class BlockchainService {
                 minedCertificates = atomicResult.minedCertificates;
                 updatedCertificates = atomicResult.updatedCertificates;
 
-                // ✅ NEW: Sync pending certificates from DB
                 await this.syncPendingFromDB();
 
-                // ✅ NEW: Verify all certificates were updated to COMPLETED
                 const minedCertIds = minedCertificates.map(c => c.id);
                 logger.info(`✅ ${minedCertIds.length} certificates mined and status updated to COMPLETED`);
                 for (const certId of minedCertIds) {
@@ -153,7 +157,6 @@ export class BlockchainService {
                     }
                 }
 
-                // ✅ NEW: Logging for verification
                 logger.info(`⛏️  Mining completed:`);
                 logger.info(`   Block: ${blockNumber}`);
                 logger.info(`   Certificates mined: ${minedCertificates.length}`);
@@ -167,7 +170,6 @@ export class BlockchainService {
 
             await this.saveBlockchain();
 
-            block.certificatesHash = certificatesHash;
             block.blockId = blockId;
 
             return {
@@ -175,7 +177,7 @@ export class BlockchainService {
                 blockHash,
                 certificatesMined: minedCertificates.length,
                 minedCertificates,
-                certificatesHash,
+                merkleRoot,
                 timestamp: block.timestamp
             };
 

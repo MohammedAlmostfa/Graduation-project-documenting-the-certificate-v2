@@ -112,12 +112,12 @@ export class MySQLDB {
     return this._execute(conn => ChainQueries.getChain(conn));
   }
 
-  async insertBlock(block, certificatesHash) {
-    return this._execute(conn => ChainQueries.insertBlock(conn, block, certificatesHash));
+  async insertBlock(block, merkleRoot) {
+    return this._execute(conn => ChainQueries.insertBlock(conn, block, merkleRoot));
   }
 
-  async minePendingCertificatesAtomic(block, certificates, certificatesHash, certificateRepo, blockIndex) {
-    return this._execute(conn => ChainQueries.minePendingCertificatesAtomic(conn, block, certificates, certificatesHash, certificateRepo, blockIndex));
+  async minePendingCertificatesAtomic(block, certificates, merkleRoot, certificateRepo, blockIndex) {
+    return this._execute(conn => ChainQueries.minePendingCertificatesAtomic(conn, block, certificates, merkleRoot, certificateRepo, blockIndex));
   }
 
   async getBlockByIndex(index) {

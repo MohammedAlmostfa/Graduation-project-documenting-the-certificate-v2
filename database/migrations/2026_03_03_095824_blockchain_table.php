@@ -17,12 +17,12 @@ return new class extends Migration
             $table->bigInteger('nonce');
             $table->integer('difficulty');
             $table->json('certificate_ids')->default('[]');
-            $table->string('certificates_hash')->default('');
+            $table->string('merkle_root')->default('');
             $table->timestamps();
 
             $table->index('block_index', 'idx_block_index');
             $table->index('previous_hash', 'idx_previous_hash');
-            $table->index('certificates_hash', 'idx_certificates_hash');
+            $table->index('merkle_root', 'idx_merkle_root');
         });
     }
 

@@ -9,14 +9,13 @@ import { logger } from '../utils/logger.js';
  * nonce, difficulty, and its own hash.
  */
 export class Block {
-  constructor(index, timestamp, certificateIds = [], certificatesHash = '', previousHash = '') {
+  constructor(index, timestamp, certificateIds = [], merkleRoot = '', previousHash = '') {
     this.index = index;
     this.timestamp = timestamp;
     // store only list of certificate ids; kept minimal for hashing simplicity
     this.certificateIds = certificateIds;
-    // a combined hash of the certificates referenced by `certificateIds`
-    // (computed by the caller, e.g. Blockchain.minePendingCertificates)
-    this.certificatesHash = certificatesHash;
+    // merkle root of all certificates (computed from Merkle Tree)
+    this.merkleRoot = merkleRoot;
     this.previousHash = previousHash;
     this.nonce = 0;
     this.difficulty = 4;
@@ -28,14 +27,14 @@ export class Block {
    * @returns {string} SHA3-512 hash string.
    */
   calculateHash() {
-    // include combined certificates hash so any modification of certificate
-    // contents (or of the id list) changes the block hash
+    // include merkle root so any modification of certificate contents changes the block hash
     return oqsCrypto.hashData(
       this.index +
       this.timestamp +
-      (this.certificatesHash || JSON.stringify(this.certificateIds)) +
+      this.merkleRoot +
       this.previousHash +
-      this.nonce
+      this.nonce +
+      this.difficulty
     );
   }
 
@@ -64,14 +63,13 @@ export class Block {
    * @returns {boolean} True if block is valid, false otherwise.
    */
   validate() {
-    // Check hash consistency
+    if (!this.merkleRoot || this.merkleRoot === '') return false;
+
     if (this.hash !== this.calculateHash()) return false;
 
-    // Check mining difficulty
     const target = '0'.repeat(this.difficulty);
     if (this.hash.substring(0, this.difficulty) !== target) return false;
 
-    // Check certificateIds format
     if (!Array.isArray(this.certificateIds)) return false;
 
     return true;
@@ -88,7 +86,7 @@ export class Block {
       certificateIds: this.certificateIds,
       // include full transaction data for in-memory/API responses if present
       data: this.transactions || [],
-      certificatesHash: this.certificatesHash,
+      merkleRoot: this.merkleRoot,
       previousHash: this.previousHash,
       hash: this.hash,
       nonce: this.nonce,

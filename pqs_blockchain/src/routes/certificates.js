@@ -135,7 +135,7 @@ router.post(
  * Validation: None required
  */
 router.get("/",
-    auth.authenticate,
+
     certificateController.getAllCertificates
 );
 

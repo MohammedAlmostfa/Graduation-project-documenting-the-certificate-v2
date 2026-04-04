@@ -37,19 +37,19 @@
         <!-- Statistics -->
         <div class="stats-bar">
             <div class="stat-card">
-                <div class="stat-value">8</div>
+                <div class="stat-value" id="statCertificatesCount">0</div>
                 <div class="stat-label">شهادات مسجلة</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">4</div>
+                <div class="stat-value" id="statBlocksCount">0</div>
                 <div class="stat-label">عدد الكتل</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">2</div>
+                <div class="stat-value" id="statPendingCount">0</div>
                 <div class="stat-label">في الانتظار</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value">4</div>
+                <div class="stat-value" id="statDifficultyValue">4</div>
                 <div class="stat-label">صعوبة التعدين</div>
             </div>
         </div>

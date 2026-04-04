@@ -1,6 +1,7 @@
 // Data Storage
 let blockchainData = [];
 let certificatesData = [];
+let pendingCertificates = [];
 
 // Utility Functions
 function formatHash(hash) {
@@ -23,15 +24,27 @@ function displayCertificates() {
 
     certsList.innerHTML = certificatesData.map(cert => `
         <div class="cert-item">
-            <div class="cert-name">${cert.studentName}</div>
-            <div class="cert-info">${cert.certificateId.substring(0, 20)}... - ${cert.university} - كتلة #${cert.blockIndex}</div>
+            <div class="cert-name">${cert.student?.name || 'غير محدد'}</div>
+            <div class="cert-info">${(cert.certificateNumber || cert.id).substring(0, 20)}... - ${cert.student?.major || cert.student?.faculty || 'غير محدد'}</div>
         </div>
     `).join('');
 }
 
 function displayPending() {
     const pendingList = document.getElementById('pendingList');
-    pendingList.innerHTML = '<div style="text-align:center;color:#999;padding:30px;">لا توجد شهادات معلقة</div>';
+
+    // عرض الشهادات المعلّقة (blockchain_added)
+    if (pendingCertificates.length === 0) {
+        pendingList.innerHTML = '<div style="text-align:center;color:#999;padding:30px;">لا توجد شهادات معلقة</div>';
+        return;
+    }
+
+    pendingList.innerHTML = pendingCertificates.map(cert => `
+        <div class="cert-item">
+            <div class="cert-name">${cert.student?.name || 'غير محدد'}</div>
+            <div class="cert-info">${(cert.certificateNumber || cert.id).substring(0, 20)}... - ${cert.student?.major || cert.student?.faculty || 'غير محدد'}</div>
+        </div>
+    `).join('');
 }
 
 function displayBlockchain() {
@@ -44,7 +57,12 @@ function displayBlockchain() {
 
     container.innerHTML = blockchainData.map((block, index) => {
         const isGenesis = block.index === 0;
-        const certs = block.data.filter(d => d.type === 'certificate');
+        const certs = Array.isArray(block.certificateIds)
+            ? block.certificateIds
+            : Array.isArray(block.data)
+                ? block.data.filter(d => d.type === 'certificate')
+                : [];
+        const certCount = certs.length;
 
         return `
             <div class="block ${isGenesis ? 'genesis' : ''}" onclick="showBlockDetails(${index})">
@@ -53,7 +71,7 @@ function displayBlockchain() {
                 </div>
 
                 <div class="block-mini-info">
-                    <div><strong>${certs.length}</strong> شهادة</div>
+                    <div><strong>${certCount}</strong> شهادة</div>
                     <div style="font-size:0.85em;margin-top:3px;">Nonce: ${block.nonce.toLocaleString()}</div>
                 </div>
 
@@ -113,11 +131,31 @@ function drawConnections() {
     svg.innerHTML = pathsHTML;
 }
 
+function updateStats() {
+    const certificatesCountEl = document.getElementById('statCertificatesCount');
+    const blocksCountEl = document.getElementById('statBlocksCount');
+    const pendingCountEl = document.getElementById('statPendingCount');
+
+    if (certificatesCountEl) {
+        certificatesCountEl.textContent = certificatesData.length.toString();
+    }
+    if (blocksCountEl) {
+        blocksCountEl.textContent = blockchainData.length.toString();
+    }
+    if (pendingCountEl) {
+        pendingCountEl.textContent = pendingCertificates.length.toString();
+    }
+}
+
 // Modal Functions
 function showBlockDetails(index) {
     const block = blockchainData[index];
     const isGenesis = block.index === 0;
-    const certs = block.data.filter(d => d.type === 'certificate');
+    const certs = Array.isArray(block.certificateIds)
+        ? block.certificateIds.map(id => ({ id }))
+        : Array.isArray(block.data)
+            ? block.data.filter(d => d.type === 'certificate')
+            : [];
 
     const modalContent = `
         <div class="modal-header ${isGenesis ? 'genesis' : ''}">
@@ -154,8 +192,8 @@ function showBlockDetails(index) {
                     <div class="modal-section-title">📄 الشهادات المسجلة</div>
                     ${certs.map(cert => `
                         <div class="cert-in-modal">
-                            <strong>${cert.student?.studentName || 'غير محدد'}</strong><br>
-                            <small style="color:#666;">${cert.certificateId || cert.id}</small><br>
+                            <strong>${cert.student?.studentName || cert.student?.name || cert.id || 'غير محدد'}</strong><br>
+                            <small style="color:#666;">${cert.certificateNumber || cert.certificateId || cert.id}</small><br>
                             <small style="color:#999;">${cert.university?.name || ''}</small>
                         </div>
                     `).join('')}
@@ -200,43 +238,43 @@ document.getElementById('modalOverlay').addEventListener('click', function(e) {
 window.addEventListener('resize', drawConnections);
 
 // API Connection
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'http://127.0.0.1:3000/api';
 
 async function fetchFromAPI() {
     try {
-        // Fetch blockchain blocks
+        // جلب الشهادات من endpoint الشهادات
+        const certificatesRes = await fetch(`${API_BASE}/certificates`);
+        if (certificatesRes.ok) {
+            const certificatesResponse = await certificatesRes.json();
+            if (certificatesResponse.status === 'success' && certificatesResponse.data?.certificates) {
+                const allCertificates = certificatesResponse.data.certificates;
+                certificatesData = allCertificates.filter(cert => cert.status === 'completed');
+                pendingCertificates = allCertificates.filter(cert => cert.status === 'blockchain_added');
+
+                console.log('Certificates loaded:', certificatesData.length);
+                console.log('Pending certificates loaded:', pendingCertificates.length);
+            }
+        }
+
+        // جلب البلوكشين للعرض فقط
         const blocksRes = await fetch(`${API_BASE}/blockchain/blocks`);
         if (blocksRes.ok) {
             const blocksData = await blocksRes.json();
             if (blocksData.status === 'success' && blocksData.data?.blocks) {
                 blockchainData = blocksData.data.blocks;
-
-                // Extract certificates from blocks
-                certificatesData = [];
-                blockchainData.forEach(block => {
-                    block.data.forEach(item => {
-                        if (item.type === 'certificate') {
-                            certificatesData.push({
-                                certificateId: item.certificateId,
-                                studentName: item.student?.studentName || 'غير محدد',
-                                university: item.university?.name || 'غير محدد',
-                                blockIndex: block.index
-                            });
-                        }
-                    });
-                });
-
-                // Update displays
-                displayCertificates();
-                displayPending();
-                displayBlockchain();
-
-                console.log('API Connected - Blocks loaded:', blockchainData.length);
+                console.log('Blockchain loaded:', blockchainData.length, 'blocks');
             }
         }
+
+        // تحديث العروض
+        displayCertificates();
+        displayPending();
+        displayBlockchain();
+        updateStats();
+
     } catch (error) {
         console.log('API Connection Error:', error);
-        // Keep showing loading state
+        // الحفاظ على حالة التحميل
     }
 }
 

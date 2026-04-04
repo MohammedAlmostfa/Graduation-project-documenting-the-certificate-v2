@@ -2,8 +2,6 @@
 
 namespace App\Services\CertificateSystem;
 
-use App\Models\Department;
-use App\Models\Major;
 use App\Services\Service;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -29,7 +27,7 @@ class CertificateService extends Service
     public function issueCertificate(array $data): array
     {
 
-        $data['major'] = Major::findOrFail($data['major_id'])->name;
+
 
         // Send request to issue a certificate
         $response = $this->api->makeRequest('POST', '/certificates', $data);

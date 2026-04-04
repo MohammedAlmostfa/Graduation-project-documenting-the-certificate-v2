@@ -9,6 +9,7 @@ import { CertificateService } from './services/certificateService.js';
 import { KeyService } from './services/keyService.js';
 import { KeyManagementService } from './services/keyManagementService.js';
 import { BlockchainService } from './services/blockchainService.js';
+import { CertificateValidationService } from './services/certificateValidationService.js';
 import { validationService } from './services/validationService.js';
 
 import { certificateRepository } from './repositories/certificateRepository.js';
@@ -37,11 +38,19 @@ const certificateService = new CertificateService({
 // (no circular dependency at construction time)
 const blockchainService = new BlockchainService({ repo: blockchainRepository });
 
+// CertificateValidationService validates certificates against blockchain
+const certificateValidationService = new CertificateValidationService({
+  blockchainService,
+  certificateRepo: certificateRepository,
+  keyManagementService
+});
+
 // -------------------------------------------------------
 // Wire cross-references (avoid constructor-time circular imports)
 // -------------------------------------------------------
 blockchainService.certificateService = certificateService;
 certificateService.blockchainService = blockchainService;
+certificateService.certificateValidationService = certificateValidationService;
 
 // WHY: initialize() يضمن ترتيباً متسلسلاً صارماً
 //      لا يمكن تشغيل syncPendingFromDB قبل اكتمال loadBlockchain
@@ -68,5 +77,6 @@ export {
   keyService,
   keyManagementService,
   blockchainService,
+  certificateValidationService,
   validationService
 };

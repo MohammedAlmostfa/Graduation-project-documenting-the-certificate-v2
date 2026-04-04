@@ -292,4 +292,3 @@ function getCertificateData() {
     return null;
 }
 
-

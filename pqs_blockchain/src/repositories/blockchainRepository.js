@@ -29,8 +29,8 @@ class BlockchainRepository extends BaseRepository {
      * Insert a new block into the database.
      * Returns the created block ID.
      */
-    async insertBlock(blockData, certificatesHash) {
-        return this.exec('insertBlock', this.db.insertBlock, blockData, certificatesHash);
+    async insertBlock(blockData, merkleRoot) {
+        return this.exec('insertBlock', this.db.insertBlock, blockData, merkleRoot);
     }
 
     /**
@@ -45,9 +45,9 @@ class BlockchainRepository extends BaseRepository {
      * 5. Update certificates with block info
      * 6. Commit transaction
      */
-    async minePendingCertificatesAtomic(block, certificates, certificatesHash, certificateRepo, blockIndex) {
+    async minePendingCertificatesAtomic(block, certificates, merkleRoot, certificateRepo, blockIndex) {
         return this.exec('minePendingCertificatesAtomic', this.db.minePendingCertificatesAtomic,
-            block, certificates, certificatesHash, certificateRepo, blockIndex);
+            block, certificates, merkleRoot, certificateRepo, blockIndex);
     }
 
     /**

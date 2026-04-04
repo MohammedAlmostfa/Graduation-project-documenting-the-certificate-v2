@@ -12,11 +12,12 @@ export class ChainQueries {
 			b.hash,
 			b.nonce,
 			b.difficulty,
-			serializeJSON(b.certificateIds) ?? '[]'
+			serializeJSON(b.certificateIds) ?? '[]',
+			b.merkleRoot || ''
 		]);
 		const sql = `
 			INSERT INTO blockchain
-				(block_index, timestamp, previous_hash, hash, nonce, difficulty, certificate_ids)
+				(block_index, timestamp, previous_hash, hash, nonce, difficulty, certificate_ids, merkle_root)
 			VALUES ?
 			ON DUPLICATE KEY UPDATE
 				timestamp = VALUES(timestamp),
@@ -24,15 +25,16 @@ export class ChainQueries {
 				hash = VALUES(hash),
 				nonce = VALUES(nonce),
 				difficulty = VALUES(difficulty),
-				certificate_ids = VALUES(certificate_ids)
+				certificate_ids = VALUES(certificate_ids),
+				merkle_root = VALUES(merkle_root)
 		`;
 		if (rows.length) await conn.query(sql, [rows]);
-		logger.debug('💾 Saved blockchain chain (relational)');
+		logger.debug('💾 Saved blockchain chain');
 		return true;
 	}
 
 	static async getChain(conn) {
-		const [rows] = await conn.query('SELECT *, certificates_hash FROM blockchain ORDER BY block_index');
+		const [rows] = await conn.query('SELECT * FROM blockchain ORDER BY block_index');
 		if (!rows || rows.length === 0) return null;
 		const chain = rows.map(r => ({
 			index: r.block_index,
@@ -42,15 +44,19 @@ export class ChainQueries {
 			nonce: r.nonce,
 			difficulty: r.difficulty,
 			certificateIds: deserializeJSON(r.certificate_ids),
-			certificatesHash: r.certificates_hash || ''
+			merkleRoot: r.merkle_root || ''
 		}));
 		return { chain, pendingCertificates: [] };
 	}
 
-	static async insertBlock(conn, block, certificatesHash) {
+	static async insertBlock(conn, block, merkleRoot) {
+		if (!merkleRoot || merkleRoot === '') {
+			throw new Error('Invalid Merkle Root: cannot be null or empty');
+		}
+
 		const sql = `
 			INSERT INTO blockchain
-				(block_index, timestamp, previous_hash, hash, nonce, difficulty, certificate_ids, certificates_hash)
+				(block_index, timestamp, previous_hash, hash, nonce, difficulty, certificate_ids, merkle_root)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		`;
 		const params = [
@@ -61,16 +67,20 @@ export class ChainQueries {
 			block.nonce,
 			block.difficulty,
 			serializeJSON(block.certificateIds) ?? '[]',
-			certificatesHash || ''
+			merkleRoot
 		];
 		const result = await conn.query(sql, params);
 		return result[0].insertId;
 	}
 
-	static async minePendingCertificatesAtomic(conn, block, certificates, certificatesHash, certificateRepo, blockIndex) {
+	static async minePendingCertificatesAtomic(conn, block, certificates, merkleRoot, certificateRepo, blockIndex) {
 		let blockId = null;
 		const minedCertificates = [];
 		try {
+			if (!merkleRoot || merkleRoot === '') {
+				throw new Error('Invalid Merkle Root: cannot be null or empty');
+			}
+
 			await conn.beginTransaction();
 			const certificateIds = certificates.map(c => c.id || c.certificateId);
 			if (certificateIds.length === 0) {
@@ -90,7 +100,7 @@ export class ChainQueries {
 			}
 			const insertBlockSql = `
 				INSERT INTO blockchain
-					(block_index, timestamp, previous_hash, hash, nonce, difficulty, certificate_ids, certificates_hash)
+					(block_index, timestamp, previous_hash, hash, nonce, difficulty, certificate_ids, merkle_root)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 			`;
 			const insertBlockParams = [
@@ -101,7 +111,7 @@ export class ChainQueries {
 				block.nonce,
 				block.difficulty,
 				serializeJSON(block.certificateIds) ?? '[]',
-				certificatesHash || ''
+				merkleRoot
 			];
 			const insertResult = await conn.query(insertBlockSql, insertBlockParams);
 			blockId = insertResult[0].insertId;
@@ -144,7 +154,6 @@ export class ChainQueries {
 			}
 			await conn.commit();
 
-			// Fetch updated certificate statuses from DB
 			const updateCertificatesSql = `
 				SELECT id, status FROM certificates
 				WHERE id IN (${certificateIds.map(() => '?').join(',')})
@@ -170,7 +179,8 @@ export class ChainQueries {
 			hash: r.hash,
 			nonce: r.nonce,
 			difficulty: r.difficulty,
-			certificateIds: deserializeJSON(r.certificate_ids)
+			certificateIds: deserializeJSON(r.certificate_ids),
+			merkleRoot: r.merkle_root || ''
 		};
 	}
 
@@ -186,7 +196,8 @@ export class ChainQueries {
 			hash: r.hash,
 			nonce: r.nonce,
 			difficulty: r.difficulty,
-			certificateIds: deserializeJSON(r.certificate_ids)
+			certificateIds: deserializeJSON(r.certificate_ids),
+			merkleRoot: r.merkle_root || ''
 		};
 	}
 
@@ -200,7 +211,8 @@ export class ChainQueries {
 			hash: r.hash,
 			nonce: r.nonce,
 			difficulty: r.difficulty,
-			certificateIds: deserializeJSON(r.certificate_ids)
+			certificateIds: deserializeJSON(r.certificate_ids),
+			merkleRoot: r.merkle_root || ''
 		}));
 	}
 }

@@ -44,6 +44,7 @@ export class Blockchain {
             blockchainConfig.genesisBlock.timestamp,
             // Genesis block has no certificates
             blockchainConfig.genesisBlock.certificateIds || [],
+            '', // merkleRoot (empty for genesis block)
             blockchainConfig.genesisBlock.previousHash
         );
 
@@ -94,7 +95,7 @@ export class Blockchain {
     /**
      * Mine pending certificates into a new block
      */
-    minePendingCertificates() {
+    minePendingCertificates(merkleRoot = null) {
 
         if (this.pendingCertificates.length === 0) {
             logger.info('No certificates in the pending queue for mining');
@@ -103,12 +104,11 @@ export class Blockchain {
 
         logger.info(`⛏️ Mining ${this.pendingCertificates.length} certificates...`);
 
-        // certificatesHash will be calculated in the service layer
         const block = new Block(
             this.chain.length,
             new Date().toISOString(),
             this.pendingCertificates.map(cert => cert.id),
-            '',
+            merkleRoot || '',
             this.getLatestBlock().hash
         );
 
