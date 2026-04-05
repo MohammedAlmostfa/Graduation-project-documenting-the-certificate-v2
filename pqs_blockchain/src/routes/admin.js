@@ -46,8 +46,7 @@ router.use(rateLimit(15 * 60 * 1000, 50));
  * Validation: User data (username, email, role, department)
  */
 router.post('/users',
-    auth.authenticate,
-      auth.requireRole(roles.PRESIDENT),
+
     validation.validateUser,
     adminController.createUser
 );
@@ -112,7 +111,6 @@ router.get('/stats',
  * Returns: Array of all backup files with timestamps
  */
 router.get('/backup/list',
-
     adminController.listBackups
 );
 

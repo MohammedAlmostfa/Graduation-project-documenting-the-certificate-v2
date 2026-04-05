@@ -12,4 +12,4 @@ yarn-error.log
 pqs_blockchain/nod_modules
 pqs_blockchain/storage
 pqs_blockchain/.env
-
+pqs_blockchain/backupS

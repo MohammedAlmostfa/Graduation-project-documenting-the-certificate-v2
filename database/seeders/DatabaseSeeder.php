@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 
-use Database\Seeders\MajorSeeder;
+
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
     {
 $this->call([
 
-MajorSeeder::class
+
        ]
 );
 

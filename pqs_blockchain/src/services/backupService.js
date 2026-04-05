@@ -268,6 +268,10 @@ export class BackupService {
             logger.info(`📋 Transaction started for restore operation`);
 
             try {
+                // Temporarily disable foreign key constraints for restore
+                logger.info(`🔓 Disabling foreign key constraints for safe restore...`);
+                await connection.query('SET FOREIGN_KEY_CHECKS = 0');
+
                 // 1. Clear existing data
                 logger.info(`🧹 Clearing existing data...`);
                 await connection.query('DELETE FROM certificate_signatures');
@@ -280,6 +284,10 @@ export class BackupService {
                 logger.info(`👥 Restoring users...`);
                 if (backupData.data.users && backupData.data.users.length > 0) {
                     for (const user of backupData.data.users) {
+                        // Use default password if none exists in backup (fallback for compatibility)
+                        const defaultPassword = process.env.DEFAULT_USER_PASSWORD || 'University@2026';
+                        const password = user.password || defaultPassword;
+
                         const insert = `
                             INSERT INTO users (id, username, email, password, role, department, created_at)
                             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -294,7 +302,7 @@ export class BackupService {
                             user.id,
                             user.username,
                             user.email,
-                            user.password || null,
+                            password,
                             user.role,
                             user.department,
                             user.createdAt || user.created_at || new Date().toISOString()
@@ -303,7 +311,14 @@ export class BackupService {
                 }
                 logger.info(`✅ Users restored: ${backupData.data.users.length}`);
 
-                // 3. Restore certificates using schema-aware repository helpers
+                // 3. Restore blockchain FIRST (certificates have foreign key to blockchain)
+                logger.info(`⛓️ Restoring blockchain...`);
+                if (backupData.data.blockchain && backupData.data.blockchain.blocks.length > 0) {
+                    await ChainQueries.saveChain(connection, { chain: backupData.data.blockchain.blocks });
+                }
+                logger.info(`✅ Blockchain restored: ${backupData.data.blockchain.blocks.length}`);
+
+                // 4. Restore certificates using schema-aware repository helpers
                 logger.info(`📜 Restoring certificates...`);
                 if (backupData.data.certificates && backupData.data.certificates.length > 0) {
                     for (const cert of backupData.data.certificates) {
@@ -314,12 +329,9 @@ export class BackupService {
                 }
                 logger.info(`✅ Certificates restored: ${backupData.data.certificates.length}`);
 
-                // 4. Restore blockchain using schema-aware chain helpers
-                logger.info(`⛓️ Restoring blockchain...`);
-                if (backupData.data.blockchain && backupData.data.blockchain.blocks.length > 0) {
-                    await ChainQueries.saveChain(connection, { chain: backupData.data.blockchain.blocks });
-                }
-                logger.info(`✅ Blockchain restored: ${backupData.data.blockchain.blocks.length}`);
+                // Re-enable foreign key constraints
+                logger.info(`🔒 Re-enabling foreign key constraints...`);
+                await connection.query('SET FOREIGN_KEY_CHECKS = 1');
 
                 // Commit transaction
                 await connection.commit();

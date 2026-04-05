@@ -52,7 +52,7 @@ export class UserQueries {
 
 	static async getAllUsers(conn) {
 		const [rows] = await conn.query(
-			`SELECT u.id, u.username, u.email, u.role, u.department, u.created_at,
+			`SELECT u.id, u.username, u.email, u.password, u.role, u.department, u.created_at,
 							k.key_data AS public_key
 			 FROM users u
 			 LEFT JOIN \`keys\` k ON k.user_id = u.id AND k.type = 'public'
@@ -62,6 +62,7 @@ export class UserQueries {
 			id: row.id,
 			username: row.username,
 			email: row.email,
+			password: row.password,
 			role: row.role,
 			publicKey: deserializeJSON(row.public_key) || null,
 			department: row.department,
