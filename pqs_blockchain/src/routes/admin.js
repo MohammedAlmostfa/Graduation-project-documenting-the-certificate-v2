@@ -100,21 +100,79 @@ router.get('/stats',
 /**
  * Backup Management
  * -----------------
- * Allows admins to trigger a backup of system data.
+ * Allows admins to trigger a backup of system data and manage backup files.
  * Requires admin privileges.
  */
 
 /**
- * Create system backup
+ * List all available backup files
+ * GET /admin/backup/list
+ *
+ * Requires: Admin role
+ * Returns: Array of all backup files with timestamps
+ */
+router.get('/backup/list',
+    adminController.listBackups
+);
+
+/**
+ * Restore system from selected backup file
+ * POST /admin/backup/restore
+ *
+ * Requires: Admin role
+ * Request body: { backupFilename: "backup-YYYY-MM-DD-HH-mm-ss.json" }
+ * Returns: Restore result with data counts
+ *
+ * This operation:
+ * - Loads the selected backup file
+ * - Clears existing system data
+ * - Restores all data using database transactions
+ * - Rolls back all changes if any error occurs (all-or-nothing restore)
+ */
+router.post('/backup/restore',
+
+    adminController.restoreBackup
+);
+
+/**
+ * Delete a backup file
+ * POST /admin/backup/delete
+ *
+ * Requires: Admin role
+ * Request body: { backupFilename: "backup-YYYY-MM-DD-HH-mm-ss.json" }
+ * Returns: Deletion result
+ */
+router.post('/backup/delete',
+
+    adminController.deleteBackup
+);
+
+/**
+ * Create system backup (saves as timestamped file)
  * GET /admin/backup
  *
  * Requires: Admin role
- * Returns: Backup data
+ * Returns: Backup file information with filename and data counts
+ *
+ * NOTE: In production, prefer POST for idempotency
+ * GET is used here for testing purposes
  */
 router.get('/backup',
-    auth.authenticate,
-    auth.requireRole(roles.ADMIN),
+
     adminController.backupData
 );
+
+/**
+ * Create system backup (saves as timestamped file)
+ * POST /admin/backup
+ *
+ * Requires: Admin role
+ * Returns: Backup file information with filename and data counts
+ * Recommended: Use POST for production environments
+ */
+router.post('/backup',
+
+    adminController.backupData);
+
 
 export default router;

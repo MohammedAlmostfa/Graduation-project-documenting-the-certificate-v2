@@ -2,7 +2,8 @@ import {
     keyService,
     certificateService,
     blockchainService,
-    validationService
+    validationService,
+    backupService
 } from '../bootstrap.js';
 import {
     logger
@@ -11,7 +12,7 @@ import {
     ApiResponse
 } from '../utils/apiResponse.js';
 import { asyncWrapper } from '../utils/asyncWrapper.js';
-
+import { RestoreBackupRequest } from '../requests/RestoreBackupRequest.js';
 /**
  * Admin Controller
  *
@@ -122,32 +123,75 @@ export const adminController = {
                 }
             }));
     }),
-
-    /**
-     * Create a backup of system data.
+  /**
+     * Create a backup of system data and save it to a file.
+     * Backup files are saved in /backups/ directory with timestamp-based names.
      * Includes certificates, users, and blockchain.
      * Admin permission required.
      */
     backupData: asyncWrapper(async (req, res) => {
-            const certificates = await certificateService.getAllCertificates();
-            const users = await keyService.getAllUsers();
-            const blockchain = await blockchainService.getAllBlocks();
-            const blockchainStats = await blockchainService.getBlockchainStats();
+            const result = await backupService.createBackupFile();
 
-            const backupData = {
-                timestamp: new Date().toISOString(),
-                version: '1.0.0',
-                data: {
-                    certificates,
-                    users,
-                    blockchain: {
-                        blocks: blockchain,
-                        stats: blockchainStats
-                    }
-                }
-            };
+            logger.info(`✅ Backup file created: ${result.filename}`);
+            res.json(ApiResponse.success('تم إنشاء النسخة الاحتياطية بنجاح (Backup created successfully)', {
+                filename: result.filename,
+                timestamp: result.timestamp,
+                dataCount: result.dataCount,
+                message: `Backup saved to: ${result.filepath}`
+            }));
+    }),
 
-            logger.info(`✅ Backup created at ${backupData.timestamp}`);
-            res.json(ApiResponse.success('Backup created successfully', backupData));
+    /**
+     * List all available backup files.
+     * Returns a list of all backups with their timestamps.
+     * Admin permission required.
+     */
+    listBackups: asyncWrapper(async (req, res) => {
+            const backups = await backupService.listBackups();
+
+            logger.info(`✅ Listed ${backups.length} backup files`);
+            res.json(ApiResponse.success('تم جلب قائمة النسخ الاحتياطية بنجاح (Backup list retrieved successfully)', {
+                count: backups.length,
+                backups
+            }));
+    }),
+
+    /**
+     * Restore system from a selected backup file.
+     * This operation:
+     * - Loads the selected backup file
+     * - Clears existing system data
+     * - Restores all data using database transactions
+     * - Rolls back all changes if any error occurs
+     *
+     * Request body: { backupFilename: "backup-YYYY-MM-DD-HH-mm-ss.json" }
+     * Admin permission required.
+     */
+    restoreBackup: asyncWrapper(async (req, res) => {
+            // Validate backup filename
+            const request = new RestoreBackupRequest(req.body.backupFilename);
+            const filename = request.validate();
+
+            logger.info(`🔄 Starting restore from backup: ${filename}`);
+
+            // Perform restore with database transaction
+            const result = await backupService.restoreFromBackup(filename);
+
+            logger.info(`✅ Restore completed successfully`);
+            res.json(ApiResponse.success('تم استعادة النظام بنجاح (System restored successfully)', result.restoreDetails));
+    }),
+
+    /**
+     * Delete a backup file.
+     * Admin permission required.
+     */
+    deleteBackup: asyncWrapper(async (req, res) => {
+            const request = new RestoreBackupRequest(req.body.backupFilename);
+            const filename = request.validate();
+
+            const result = await backupService.deleteBackup(filename);
+
+            logger.info(`🗑️ Backup deleted: ${filename}`);
+            res.json(ApiResponse.success('تم حذف النسخة الاحتياطية بنجاح (Backup deleted successfully)', result));
     })
 };
