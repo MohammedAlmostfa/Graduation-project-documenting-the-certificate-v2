@@ -9,12 +9,14 @@ import { KeyManagementService } from './services/keyManagementService.js';
 import { BlockchainService } from './services/blockchainService.js';
 import { CertificateValidationService } from './services/certificateValidationService.js';
 import { validationService } from './services/validationService.js';
+import { BackupService } from './services/backupService.js';
 
 import { certificateRepository } from './repositories/certificateRepository.js';
 import { userRepository } from './repositories/userRepository.js';
 import { keyRepository } from './repositories/keyRepository.js';
 import { blockchainRepository } from './repositories/blockchainRepository.js';
 import { logger } from './utils/logger.js';
+import { mysqlDB } from './storage/mysqlDB.js';
 
 // -------------------------------------------------------
 // Instantiate shared singletons
@@ -31,6 +33,12 @@ const certificateValidationService = new CertificateValidationService({
   blockchainService,
   certificateRepo: certificateRepository,
   keyManagementService
+});
+const backupService = new BackupService({
+  certificateService,
+  keyService,
+  blockchainService,
+  db: mysqlDB
 });
 
 // -------------------------------------------------------
@@ -57,6 +65,7 @@ export const services = {
   keyManagementService,
   blockchainService,
   certificateValidationService,
+  backupService,
   validationService
 };
 
@@ -66,5 +75,6 @@ export {
   keyManagementService,
   blockchainService,
   certificateValidationService,
+  backupService,
   validationService
 };
