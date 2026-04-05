@@ -47,7 +47,7 @@ router.use(rateLimit(15 * 60 * 1000, 50));
  */
 router.post('/users',
     auth.authenticate,
-    auth.requireRole(roles.ADMIN),
+      auth.requireRole(roles.PRESIDENT),
     validation.validateUser,
     adminController.createUser
 );
@@ -60,7 +60,7 @@ router.post('/users',
  */
 router.get('/users',
     auth.authenticate,
-    auth.requireRole(roles.ADMIN),
+      auth.requireRole(roles.PRESIDENT),
     adminController.getAllUsers
 );
 
@@ -73,7 +73,7 @@ router.get('/users',
  */
 router.get('/users/:userId',
     auth.authenticate,
-    auth.requireRole(roles.ADMIN),
+      auth.requireRole(roles.PRESIDENT),
     adminController.getUser
 );
 

@@ -4,8 +4,8 @@ import { initServices } from './src/bootstrap.js';
 import { logger } from './src/utils/logger.js';
 
 if (!process.env.ENCRYPTION_KEY) {
-  console.error('❌ ERROR: ENCRYPTION_KEY environment variable is not set!');
-  console.error('Please create a .env file or use .env.example with ENCRYPTION_KEY value');
+  logger.error('❌ ERROR: ENCRYPTION_KEY environment variable is not set!');
+  logger.error('Please create a .env file or use .env.example with ENCRYPTION_KEY value');
   process.exit(1);
 }
 

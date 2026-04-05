@@ -23,6 +23,7 @@ import {
 import {
     oqsCrypto
 } from '../utils/crypto-oqs.js';
+import { addStatusLabels } from '../utils/helpers.js';
 
 
 /**
@@ -48,10 +49,7 @@ export class CertificateService {
         if (!certificateData) throw new NotFoundError('Certificate not found');
         const certificate = new Certificate(certificateData);
         const json = certificate.toPublicJSON();
-        if (certificateStatusLabels && json.status) {
-            json.statusLabel = certificateStatusLabels[json.status] || json.status;
-        }
-        return json;
+        return addStatusLabels(json);
     }
     /**
      * تحقق من الشهادة باستخدام certificateNumber
@@ -155,10 +153,7 @@ export class CertificateService {
 
             const certificate = new Certificate(certificateData);
             const json = certificate.toJSON();
-            if (certificateStatusLabels && json.status) {
-                json.statusLabel = certificateStatusLabels[json.status] || json.status;
-            }
-            return json;
+            return addStatusLabels(json);
         } catch (error) {
             logger.error(`❌ Error retrieving certificate: ${error.message}`);
             throw error;
@@ -270,12 +265,7 @@ export class CertificateService {
     async getAllCertificates() {
         try {
             const list = await this.repo.getCertificates();
-            return list.map(c => {
-                if (certificateStatusLabels && c.status) {
-                    c.statusLabel = certificateStatusLabels[c.status] || c.status;
-                }
-                return c;
-            });
+            return addStatusLabels(list);
         } catch (error) {
             logger.error(`❌ Error retrieving all certificates: ${error.message}`);
             return [];
@@ -289,12 +279,7 @@ export class CertificateService {
      */
     async getCertificatesByStatus(status) {
         const certs = await this.repo.getCertificatesByStatus(status);
-        return certs.map(c => {
-            if (certificateStatusLabels && c.status) {
-                c.statusLabel = certificateStatusLabels[c.status] || c.status;
-            }
-            return c;
-        });
+        return addStatusLabels(certs);
     }
 
 
