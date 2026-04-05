@@ -46,7 +46,8 @@ router.use(rateLimit(15 * 60 * 1000, 50));
  * Validation: User data (username, email, role, department)
  */
 router.post('/users',
-
+    auth.authenticate,
+    auth.requireRole(roles.ADMIN),
     validation.validateUser,
     adminController.createUser
 );
@@ -99,79 +100,20 @@ router.get('/stats',
 /**
  * Backup Management
  * -----------------
- * Allows admins to trigger a backup of system data and manage backup files.
+ * Allows admins to trigger a backup of system data.
  * Requires admin privileges.
  */
 
 /**
- * List all available backup files
- * GET /admin/backup/list
- *
- * Requires: Admin role
- * Returns: Array of all backup files with timestamps
- */
-router.get('/backup/list',
-    adminController.listBackups
-);
-
-/**
- * Restore system from selected backup file
- * POST /admin/backup/restore
- *
- * Requires: Admin role
- * Request body: { backupFilename: "backup-YYYY-MM-DD-HH-mm-ss.json" }
- * Returns: Restore result with data counts
- *
- * This operation:
- * - Loads the selected backup file
- * - Clears existing system data
- * - Restores all data using database transactions
- * - Rolls back all changes if any error occurs (all-or-nothing restore)
- */
-router.post('/backup/restore',
-
-    adminController.restoreBackup
-);
-
-/**
- * Delete a backup file
- * POST /admin/backup/delete
- *
- * Requires: Admin role
- * Request body: { backupFilename: "backup-YYYY-MM-DD-HH-mm-ss.json" }
- * Returns: Deletion result
- */
-router.post('/backup/delete',
-    auth.authenticate,
-    auth.requireRole(roles.ADMIN),
-    adminController.deleteBackup
-);
-
-/**
- * Create system backup (saves as timestamped file)
+ * Create system backup
  * GET /admin/backup
  *
  * Requires: Admin role
- * Returns: Backup file information with filename and data counts
- *
- * NOTE: In production, prefer POST for idempotency
- * GET is used here for testing purposes
+ * Returns: Backup data
  */
 router.get('/backup',
-
-    adminController.backupData
-);
-
-/**
- * Create system backup (saves as timestamped file)
- * POST /admin/backup
- *
- * Requires: Admin role
- * Returns: Backup file information with filename and data counts
- * Recommended: Use POST for production environments
- */
-router.post('/backup',
-
+    auth.authenticate,
+    auth.requireRole(roles.ADMIN),
     adminController.backupData
 );
 

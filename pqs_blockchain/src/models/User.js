@@ -31,13 +31,14 @@ export class User {
   }
 
   /**
-   * Return user data without the private key or stored password hash.
+   * Return user data without the private key.
    */
   toSafeJSON() {
     return {
       id: this.id,
       username: this.username,
       email: this.email,
+      password: this.password,
       role: this.role,
       department: this.department,
       publicKey: this.publicKey,
@@ -49,18 +50,8 @@ export class User {
   }
 
   /**
-   * Return the user object that can be persisted in the database.
-   */
-  toDatabaseJSON() {
-    return {
-      ...this.toSafeJSON(),
-      password: this.password
-    };
-  }
-
-  /**
-   * Return full user data for application use.
-   * Includes a flag showing whether the private key is loaded.
+   * Return full user data.
+   * Includes a flag showing if a private key exists.
    */
   toJSON() {
     return {

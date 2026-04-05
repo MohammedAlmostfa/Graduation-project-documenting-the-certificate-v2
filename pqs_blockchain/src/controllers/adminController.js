@@ -2,7 +2,6 @@ import {
     keyService,
     certificateService,
     blockchainService,
-    backupService,
     validationService
 } from '../bootstrap.js';
 import {
@@ -12,9 +11,6 @@ import {
     ApiResponse
 } from '../utils/apiResponse.js';
 import { asyncWrapper } from '../utils/asyncWrapper.js';
-import { CreateUserRequest } from '../requests/CreateUserRequest.js';
-import { UserIdRequest } from '../requests/UserIdRequest.js';
-import { RestoreBackupRequest } from '../requests/RestoreBackupRequest.js';
 
 /**
  * Admin Controller
@@ -34,8 +30,15 @@ export const adminController = {
      * Admin permission required.
      */
     createUser: asyncWrapper(async (req, res) => {
-            const request = new CreateUserRequest(req.body);
-            const userData = request.validate();
+            const userData = req.body;
+
+            // Validate input data
+            const validation = validationService.validateUserData(userData);
+            if (!validation.isValid) {
+                return res.status(400).json(
+                    ApiResponse.error('Invalid user data', 'VALIDATION_ERROR', validation.errors)
+                );
+            }
 
             const result = await keyService.createUser(
                 userData.username,
@@ -46,7 +49,7 @@ export const adminController = {
             );
 
             res.status(201).json(
-                ApiResponse.success('تم إنشاء المستخدم بنجاح', {
+                ApiResponse.success('User created successfully', {
                     user: result.user,
                     privateKey: result.privateKey
                 })
@@ -59,7 +62,7 @@ export const adminController = {
      */
     getAllUsers: asyncWrapper(async (req, res) => {
             const users = await keyService.getAllUsers();
-            res.json(ApiResponse.success('تم جلب قائمة المستخدمين بنجاح', {
+            res.json(ApiResponse.success('User list retrieved successfully', {
                 count: users.length,
                 users
             }));
@@ -70,11 +73,17 @@ export const adminController = {
      * Admin permission required.
      */
     getUser: asyncWrapper(async (req, res) => {
-            const userIdRequest = new UserIdRequest(req.params.userId);
-            const userId = userIdRequest.validate();
+            const { userId } = req.params;
+
+            // Check if userId exists
+            if (!userId || userId.trim() === '') {
+                return res.status(400).json(
+                    ApiResponse.error('User ID is required', 'VALIDATION_ERROR', null)
+                );
+            }
 
             const user = await keyService.getUser(userId);
-            res.json(ApiResponse.success('تم جلب بيانات المستخدم بنجاح', user.toSafeJSON()));
+            res.json(ApiResponse.success('User data retrieved successfully', user.toSafeJSON()));
     }),
 
     /**
@@ -96,7 +105,7 @@ export const adminController = {
                 return acc;
             }, {});
 
-            res.json(ApiResponse.success('تم جلب إحصائيات النظام بنجاح', {
+            res.json(ApiResponse.success('System statistics retrieved successfully', {
                 system: {
                     uptime: process.uptime(),
                     memory: process.memoryUsage(),
@@ -115,74 +124,30 @@ export const adminController = {
     }),
 
     /**
-     * Create a backup of system data and save it to a file.
-     * Backup files are saved in /backups/ directory with timestamp-based names.
+     * Create a backup of system data.
      * Includes certificates, users, and blockchain.
      * Admin permission required.
      */
     backupData: asyncWrapper(async (req, res) => {
-            const result = await backupService.createBackupFile();
+            const certificates = await certificateService.getAllCertificates();
+            const users = await keyService.getAllUsers();
+            const blockchain = await blockchainService.getAllBlocks();
+            const blockchainStats = await blockchainService.getBlockchainStats();
 
-            logger.info(`✅ Backup file created: ${result.filename}`);
-            res.json(ApiResponse.success('تم إنشاء النسخة الاحتياطية بنجاح (Backup created successfully)', {
-                filename: result.filename,
-                timestamp: result.timestamp,
-                dataCount: result.dataCount,
-                message: `Backup saved to: ${result.filepath}`
-            }));
-    }),
+            const backupData = {
+                timestamp: new Date().toISOString(),
+                version: '1.0.0',
+                data: {
+                    certificates,
+                    users,
+                    blockchain: {
+                        blocks: blockchain,
+                        stats: blockchainStats
+                    }
+                }
+            };
 
-    /**
-     * List all available backup files.
-     * Returns a list of all backups with their timestamps.
-     * Admin permission required.
-     */
-    listBackups: asyncWrapper(async (req, res) => {
-            const backups = await backupService.listBackups();
-
-            logger.info(`✅ Listed ${backups.length} backup files`);
-            res.json(ApiResponse.success('تم جلب قائمة النسخ الاحتياطية بنجاح (Backup list retrieved successfully)', {
-                count: backups.length,
-                backups
-            }));
-    }),
-
-    /**
-     * Restore system from a selected backup file.
-     * This operation:
-     * - Loads the selected backup file
-     * - Clears existing system data
-     * - Restores all data using database transactions
-     * - Rolls back all changes if any error occurs
-     *
-     * Request body: { backupFilename: "backup-YYYY-MM-DD-HH-mm-ss.json" }
-     * Admin permission required.
-     */
-    restoreBackup: asyncWrapper(async (req, res) => {
-            // Validate backup filename
-            const request = new RestoreBackupRequest(req.body.backupFilename);
-            const filename = request.validate();
-
-            logger.info(`🔄 Starting restore from backup: ${filename}`);
-
-            // Perform restore with database transaction
-            const result = await backupService.restoreFromBackup(filename);
-
-            logger.info(`✅ Restore completed successfully`);
-            res.json(ApiResponse.success('تم استعادة النظام بنجاح (System restored successfully)', result.restoreDetails));
-    }),
-
-    /**
-     * Delete a backup file.
-     * Admin permission required.
-     */
-    deleteBackup: asyncWrapper(async (req, res) => {
-            const request = new RestoreBackupRequest(req.body.backupFilename);
-            const filename = request.validate();
-
-            const result = await backupService.deleteBackup(filename);
-
-            logger.info(`🗑️ Backup deleted: ${filename}`);
-            res.json(ApiResponse.success('تم حذف النسخة الاحتياطية بنجاح (Backup deleted successfully)', result));
+            logger.info(`✅ Backup created at ${backupData.timestamp}`);
+            res.json(ApiResponse.success('Backup created successfully', backupData));
     })
 };
