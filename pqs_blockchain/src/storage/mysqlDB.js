@@ -112,6 +112,10 @@ export class MySQLDB {
     return this._execute(conn => ChainQueries.getChain(conn));
   }
 
+  async getLastBlockFromDB() {
+    return this._execute(conn => ChainQueries.getLastBlockFromDB(conn));
+  }
+
   async insertBlock(block, merkleRoot) {
     return this._execute(conn => ChainQueries.insertBlock(conn, block, merkleRoot));
   }

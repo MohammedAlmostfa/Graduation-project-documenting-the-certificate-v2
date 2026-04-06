@@ -95,35 +95,29 @@ export class Blockchain {
     /**
      * Mine pending certificates into a new block
      * @param {string} merkleRoot - Merkle root of certificates
-     * @param {number} nextBlockId - OPTIONAL: Explicit block id to use (from DB, for race condition prevention)
+     * @param {number} nextBlockId - REQUIRED: Block id from DB (for deterministic sequence)
+     * @param {string} previousHashFromDB - REQUIRED: Hash from DB (ensures chain continuity)
      */
-    minePendingCertificates(merkleRoot = null, nextBlockId = null) {
+    minePendingCertificates(merkleRoot = null, nextBlockId = null, previousHashFromDB = null) {
 
         if (this.pendingCertificates.length === 0) {
             logger.info('No certificates in the pending queue for mining');
             return null;
         }
 
-        // Use provided id or calculate from chain length
-        // In race conditions, nextBlockId is provided from DB to get sequence correct
+        // CRITICAL: Use DB values to ensure deterministic chain
         const blockId = nextBlockId !== null ? nextBlockId : this.chain.length;
-
-        if (nextBlockId !== null && nextBlockId !== this.chain.length) {
-            logger.debug(
-                `⚠️  Block id override: DB suggested ${nextBlockId}, ` +
-                `but memory chain has length ${this.chain.length}. ` +
-                `Using DB id ${nextBlockId} to handle potential race conditions.`
-            );
-        }
+        const previousHash = previousHashFromDB !== null ? previousHashFromDB : this.getLatestBlock().hash;
 
         logger.info(`⛏️ Mining ${this.pendingCertificates.length} certificates (block id: ${blockId})...`);
+        logger.info(`   Previous hash: ${previousHash.substring(0, 16)}...`);
 
         const block = new Block(
             blockId,
             new Date().toISOString(),
             this.pendingCertificates.map(cert => cert.id),
             merkleRoot || '',
-            this.getLatestBlock().hash
+            previousHash  // ← CRITICAL: Use DB value for chain continuity
         );
 
         // Keep full certificate data in memory

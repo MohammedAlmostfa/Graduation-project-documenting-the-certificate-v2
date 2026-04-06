@@ -45,13 +45,7 @@ const startServer = async () => {
     logger.info(`🔄 الخادم يعمل على http://localhost:${port}`);
     logger.info('📊 نظام الشهادات الجامعية جاهز للاستخدام');
 
-    // Send startup notification to Telegram
-    await telegramService.info(
-      `🚀 *Server Started*\n\n` +
-      `*Port:* \`${port}\`\n` +
-      `*Environment:* \`${process.env.NODE_ENV || 'development'}\`\n` +
-      `*Time:* _${new Date().toISOString()}_`
-    );
+
   });
 };
 

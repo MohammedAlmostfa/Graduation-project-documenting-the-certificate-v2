@@ -135,9 +135,9 @@ export class Certificate {
      * Calculate honors level from GPA
      */
     calculateHonors(gpa) {
-        if (gpa >= 3.8) return certificateConfig.honors.EXCELLENT;
-        if (gpa >= 3.4) return certificateConfig.honors.VERY_GOOD;
-        if (gpa >= 2.8) return certificateConfig.honors.GOOD;
+        if (gpa >= 90) return certificateConfig.honors.EXCELLENT;
+        if (gpa >= 75) return certificateConfig.honors.VERY_GOOD;
+        if (gpa >= 60) return certificateConfig.honors.GOOD;
         return certificateConfig.honors.PASS;
     }
 

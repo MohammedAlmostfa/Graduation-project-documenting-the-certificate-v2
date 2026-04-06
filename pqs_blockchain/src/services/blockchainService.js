@@ -142,11 +142,19 @@ export class BlockchainService {
                 return null;
             }
 
-            // CRITICAL: Get the actual last block index from DB to prevent race conditions
-            // Don't rely on memory state (this.chain.length) as it may be stale
-            const lastBlockIndexInDB = await this.repo.getLastBlockIndex();
-            const nextBlockId = lastBlockIndexInDB + 1;
-            logger.debug(`📊 Determined next block id from DB: ${nextBlockId} (last: ${lastBlockIndexInDB})`);
+            // CRITICAL: Get the actual last block from DB (NOT memory) for deterministic chain building
+            // This ensures:
+            // 1. blockId is next sequential (no gaps)
+            // 2. previousHash = actual last block hash
+            // 3. Prevents race conditions from stale memory state
+            const lastBlockFromDB = await this.repo.getLastBlockFromDB();
+            const nextBlockId = lastBlockFromDB.nextId;
+            const previousHashFromDB = lastBlockFromDB.hash;
+
+            logger.debug(`🔗 Chain state from DB:`);
+            logger.debug(`   Last block id: ${lastBlockFromDB.id}`);
+            logger.debug(`   Next block id: ${nextBlockId}`);
+            logger.debug(`   Previous hash: ${previousHashFromDB.substring(0, 16)}...`);
 
             // CRITICAL: Create snapshot of certificate hashes to prevent merkle root mismatch
             // This ensures: same certificates = same merkle root
@@ -198,8 +206,13 @@ export class BlockchainService {
                 throw new Error('Invalid Merkle Root: cannot be empty');
             }
 
-            // Pass nextBlockId to blockchain to prevent memory-based id collisions
-            const result = this.blockchain.minePendingCertificates(merkleRoot, nextBlockId);
+            // CRITICAL: Pass nextBlockId AND previousHash from DB to blockchain
+            // This ensures new block is connected to actual last block in chain
+            const result = this.blockchain.minePendingCertificates(
+                merkleRoot,
+                nextBlockId,
+                previousHashFromDB  // ← NEW: Pass actual previousHash from DB
+            );
             if (!result) {
                 logger.debug('No pending certificates to mine');
                 return null;

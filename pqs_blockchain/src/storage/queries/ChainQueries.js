@@ -129,6 +129,55 @@ export class ChainQueries {
 	}
 
 	/**
+	 * CRITICAL: Get last block from DB WITHOUT locking
+	 * Used in blockchainService to determine block id and previousHash
+	 * This is separate from getLastBlockWithLock which is used during atomic mining
+	 *
+	 * Returns:
+	 * - For non-genesis blocks: {id, hash, previousHash}
+	 * - For genesis (no blocks): {id: -1, hash: '0', previousHash: '0'}
+	 */
+	static async getLastBlockFromDB(conn) {
+		try {
+			const [rows] = await conn.query(`
+				SELECT id, hash, previous_hash, nonce, difficulty, timestamp, merkle_root
+				FROM blockchain
+				ORDER BY id DESC
+				LIMIT 1
+			`);
+
+			if (!rows || rows.length === 0) {
+				// No blocks yet, return genesis reference
+				logger.debug(`📍 No blocks in DB - Genesis block will be created next (id=0)`);
+				return {
+					id: -1,
+					hash: '0',
+					previousHash: '0',
+					nonce: 0,
+					difficulty: 4
+				};
+			}
+
+			const lastBlock = rows[0];
+			logger.debug(`📍 Last block from DB: id=${lastBlock.id}, hash=${lastBlock.hash.substring(0, 16)}...`);
+
+			return {
+				id: Number(lastBlock.id),
+				hash: String(lastBlock.hash),
+				previousHash: String(lastBlock.previous_hash || '0'),
+				nonce: Number(lastBlock.nonce),
+				difficulty: Number(lastBlock.difficulty),
+				timestamp: lastBlock.timestamp,
+				merkleRoot: String(lastBlock.merkle_root || ''),
+				nextId: Number(lastBlock.id) + 1
+			};
+		} catch (error) {
+			logger.error(`❌ Error getting last block from DB: ${error.message}`);
+			throw error;
+		}
+	}
+
+	/**
 	 * Get last block info with locking to prevent race conditions
 	 * Uses FOR UPDATE to ensure atomic read and prevent concurrent mining
 	 * conflicts where multiple threads try to mine simultaneously

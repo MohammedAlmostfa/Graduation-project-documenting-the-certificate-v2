@@ -72,6 +72,18 @@ class BlockchainRepository extends BaseRepository {
     }
 
     /**
+     * Get the last block directly from DB (NOT from memory)
+     * CRITICAL: Used before mining to ensure correct:
+     * - blockId (next sequential id)
+     * - previousHash (hash of actual last block)
+     *
+     * This prevents race conditions where memory state is stale
+     */
+    async getLastBlockFromDB() {
+        return this.exec('getLastBlockFromDB', this.db.getLastBlockFromDB);
+    }
+
+    /**
      * Get the last block id safely to prevent race conditions
      * Used to determine the next block id for mining
      */
