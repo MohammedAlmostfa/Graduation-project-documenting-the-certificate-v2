@@ -38,7 +38,7 @@ export const adminController = {
             const validation = validationService.validateUserData(userData);
             if (!validation.isValid) {
                 return res.status(400).json(
-                    ApiResponse.error('Invalid user data', 'VALIDATION_ERROR', validation.errors)
+                    ApiResponse.error('بيانات المستخدم غير صحيحة', 'VALIDATION_ERROR', validation.errors)
                 );
             }
 
@@ -51,7 +51,7 @@ export const adminController = {
             );
 
             res.status(201).json(
-                ApiResponse.success('User created successfully', {
+                ApiResponse.success('تم إنشاء المستخدم بنجاح', {
                     user: result.user,
                     privateKey: result.privateKey
                 })
@@ -64,7 +64,7 @@ export const adminController = {
      */
     getAllUsers: asyncWrapper(async (req, res) => {
             const users = await keyService.getAllUsers();
-            res.json(ApiResponse.success('User list retrieved successfully', {
+            res.json(ApiResponse.success('تم استرجاع قائمة المستخدمين بنجاح', {
                 count: users.length,
                 users
             }));
@@ -80,12 +80,12 @@ export const adminController = {
             // Check if userId exists
             if (!userId || userId.trim() === '') {
                 return res.status(400).json(
-                    ApiResponse.error('User ID is required', 'VALIDATION_ERROR', null)
+                    ApiResponse.error('معرف المستخدم مطلوب', 'VALIDATION_ERROR', null)
                 );
             }
 
             const user = await keyService.getUser(userId);
-            res.json(ApiResponse.success('User data retrieved successfully', user.toSafeJSON()));
+            res.json(ApiResponse.success('تم استرجاع بيانات المستخدم بنجاح', user.toSafeJSON()));
     }),
 
     /**
@@ -107,7 +107,7 @@ export const adminController = {
                 return acc;
             }, {});
 
-            res.json(ApiResponse.success('System statistics retrieved successfully', {
+            res.json(ApiResponse.success('تم استرجاع إحصائيات النظام بنجاح', {
                 system: {
                     uptime: process.uptime(),
                     memory: process.memoryUsage(),
@@ -131,11 +131,11 @@ export const adminController = {
      * Admin permission required.
      */
     backupData: asyncWrapper(async (req, res) => {
-            logger.info('📦 Backup operation started');
+            logger.info('Backup operation started');
 
             // Send start notification
             await telegramService.info(
-                `*📦 النسخة الاحتياطية - نسخة جديدة*\n\n` +
+                `*النسخة الاحتياطية - نسخة جديدة*\n\n` +
                 `*Status:* جاري الانتظار...\n` +
                 `*التاريخ:* _${new Date().toISOString()}_`
             );
@@ -143,11 +143,11 @@ export const adminController = {
             try {
                 const result = await backupService.createBackupFile();
 
-                logger.info(`✅ Backup file created: ${result.filename}`);
+                logger.info(`Backup file created: ${result.filename}`);
 
                 // Send success notification with details
                 await telegramService.success(
-                    `*📦 النسخة الاحتياطية تم إنشاؤها بنجاح*\n\n` +
+                    `*النسخة الاحتياطية تم إنشاؤها بنجاح*\n\n` +
                     `*الملف:* \`${result.filename}\`\n` +
                     `*الشهادات:* ${result.dataCount.certificates}\n` +
                     `*المستخدمون:* ${result.dataCount.users}\n` +
@@ -155,14 +155,14 @@ export const adminController = {
                     `*التاريخ:* _${result.timestamp}_`
                 );
 
-                res.json(ApiResponse.success('تم إنشاء النسخة الاحتياطية بنجاح (Backup created successfully)', {
+                res.json(ApiResponse.success('تم إنشاء النسخة الاحتياطية بنجاح', {
                     filename: result.filename,
                     timestamp: result.timestamp,
                     dataCount: result.dataCount,
                     message: `Backup saved to: ${result.filepath}`
                 }));
             } catch (error) {
-                logger.error(`❌ Backup creation failed: ${error.message}`);
+                logger.error(`Backup creation failed: ${error.message}`);
 
                 // Send error notification
                 await telegramService.error(
@@ -183,8 +183,8 @@ export const adminController = {
     listBackups: asyncWrapper(async (req, res) => {
             const backups = await backupService.listBackups();
 
-            logger.info(`✅ Listed ${backups.length} backup files`);
-            res.json(ApiResponse.success('تم جلب قائمة النسخ الاحتياطية بنجاح (Backup list retrieved successfully)', {
+            logger.info(`Listed ${backups.length} backup files`);
+            res.json(ApiResponse.success('تم جلب قائمة النسخ الاحتياطية بنجاح', {
                 count: backups.length,
                 backups
             }));
@@ -206,25 +206,25 @@ export const adminController = {
             const request = new RestoreBackupRequest(req.body.backupFilename);
             const filename = request.validate();
 
-            logger.info(`🔄 Starting restore from backup: ${filename}`);
+            logger.info(`Starting restore from backup: ${filename}`);
 
             // Send start notification
             await telegramService.warning(
-                `*🔄 استعادة النظام - جاري الانتظار*\n\n` +
+                `*استعادة النظام - جاري الانتظار*\n\n` +
                 `*الملف:* \`${filename}\`\n` +
                 `*التاريخ:* _${new Date().toISOString()}_\n\n` +
-                `⚠️ _تحذير: قد يستغرق الأمر عدة ثوان_`
+                `تحذير: قد يستغرق الأمر عدة ثوان`
             );
 
             try {
                 // Perform restore with database transaction
                 const result = await backupService.restoreFromBackup(filename);
 
-                logger.info(`✅ Restore completed successfully`);
+                logger.info(`Restore completed successfully`);
 
                 // Send success notification
                 await telegramService.success(
-                    `*✅ تم استعادة النظام بنجاح*\n\n` +
+                    `*تم استعادة النظام بنجاح*\n\n` +
                     `*الملف:* \`${filename}\`\n` +
                     `*الشهادات المستعادة:* ${result.restoreDetails.dataRestored.certificates}\n` +
                     `*المستخدمون المستعادون:* ${result.restoreDetails.dataRestored.users}\n` +
@@ -232,13 +232,13 @@ export const adminController = {
                     `*التاريخ:* _${new Date().toISOString()}_`
                 );
 
-                res.json(ApiResponse.success('تم استعادة النظام بنجاح (System restored successfully)', result.restoreDetails));
+                res.json(ApiResponse.success('تم استعادة النظام بنجاح', result.restoreDetails));
             } catch (error) {
                 logger.error(`❌ Restore from backup failed: ${error.message}`);
 
                 // Send error notification
                 await telegramService.error(
-                    `*❌ فشل استعادة النظام*\n\n` +
+                    `*فشل استعادة النظام*\n\n` +
                     `*الملف:* \`${filename}\`\n` +
                     `*الخطأ:* ${error.message}`,
                     error
@@ -256,22 +256,22 @@ export const adminController = {
             const request = new RestoreBackupRequest(req.body.backupFilename);
             const filename = request.validate();
 
-            logger.info(`🗑️ Deleting backup: ${filename}`);
+            logger.info(`Deleting backup: ${filename}`);
 
             try {
                 const result = await backupService.deleteBackup(filename);
 
-                logger.info(`🗑️ Backup deleted: ${filename}`);
+                logger.info(`Backup deleted: ${filename}`);
 
                 // Send info notification
                 await telegramService.info(
-                    `*🗑️ تم حذف نسخة احتياطية*\n\n` +
+                    `*تم حذف نسخة احتياطية*\n\n` +
                     `*الملف:* \`${filename}\``
                 );
 
-                res.json(ApiResponse.success('تم حذف النسخة الاحتياطية بنجاح (Backup deleted successfully)', result));
+                res.json(ApiResponse.success('تم حذف النسخة الاحتياطية بنجاح', result));
             } catch (error) {
-                logger.error(`❌ Failed to delete backup: ${error.message}`);
+                logger.error(`Failed to delete backup: ${error.message}`);
 
                 // Send error notification
                 await telegramService.error(

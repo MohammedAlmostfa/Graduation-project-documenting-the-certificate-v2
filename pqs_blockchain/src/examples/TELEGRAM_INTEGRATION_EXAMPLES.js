@@ -27,7 +27,7 @@ export const createCertificateWithNotification = asyncWrapper(async (req, res) =
     // Validate input
     if (!studentName || !certificateNumber || !department) {
       return res.status(400).json(
-        ApiResponse.error('Missing required fields', 'VALIDATION_ERROR')
+        ApiResponse.error('الحقول المطلوبة مفقودة', 'VALIDATION_ERROR')
       );
     }
 
@@ -42,7 +42,7 @@ export const createCertificateWithNotification = asyncWrapper(async (req, res) =
       `*Department:* ${department}`
     );
 
-    res.status(201).json(ApiResponse.success('Certificate created', {
+    res.status(201).json(ApiResponse.success('تم إنشاء الشهادة', {
       studentName,
       certificateNumber,
       department
@@ -66,8 +66,6 @@ export const verifyCertificateWithNotification = asyncWrapper(async (req, res) =
   try {
     const { certificateId } = req.params;
 
-    logger.info(`Verifying certificate: ${certificateId}`);
-
     // TODO: Verify certificate logic
     // const verification = await certificateService.verify(certificateId);
 
@@ -90,7 +88,7 @@ export const verifyCertificateWithNotification = asyncWrapper(async (req, res) =
       );
 
       return res.status(400).json(
-        ApiResponse.error('Certificate verification failed')
+        ApiResponse.error('فشل التحقق من الشهادة')
       );
     }
 
@@ -101,7 +99,7 @@ export const verifyCertificateWithNotification = asyncWrapper(async (req, res) =
       `*Status:* Valid`
     );
 
-    res.json(ApiResponse.success('Certificate verified', { isValid }));
+    res.json(ApiResponse.success('تم التحقق من الشهادة', { isValid }));
 
   } catch (error) {
     await telegramService.error(
@@ -122,7 +120,7 @@ export const batchValidateCertificatesWithNotification = asyncWrapper(async (req
 
     if (!Array.isArray(certificateIds) || certificateIds.length === 0) {
       return res.status(400).json(
-        ApiResponse.error('Invalid certificate IDs', 'VALIDATION_ERROR')
+        ApiResponse.error('معرفات الشهادات غير صحيحة', 'VALIDATION_ERROR')
       );
     }
 
@@ -170,7 +168,7 @@ export const batchValidateCertificatesWithNotification = asyncWrapper(async (req
       `*Success Rate:* ${((validCount / total) * 100).toFixed(2)}%`
     );
 
-    res.json(ApiResponse.success('Batch validation completed', {
+    res.json(ApiResponse.success('اكتمل التحقق الجماعي', {
       total,
       validCount,
       invalidCount,
@@ -192,8 +190,6 @@ export const batchValidateCertificatesWithNotification = asyncWrapper(async (req
 
 export const backupDatabaseWithNotification = asyncWrapper(async (req, res) => {
   try {
-    logger.info('Starting database backup...');
-
     // Send start notification
     await telegramService.info('*Database Backup Started*');
 
@@ -215,7 +211,7 @@ export const backupDatabaseWithNotification = asyncWrapper(async (req, res) => {
       `*Status:* ✅ Success`
     );
 
-    res.json(ApiResponse.success('Database backup completed', backupResult));
+    res.json(ApiResponse.success('اكتمل نسخ قاعدة البيانات احتياطياً', backupResult));
 
   } catch (error) {
     await telegramService.error(
@@ -250,7 +246,7 @@ export const complexOperationWithDetailedErrorHandling = asyncWrapper(async (req
       `*Duration:* 2.5s`
     );
 
-    res.json(ApiResponse.success('Operation completed', { operationId }));
+    res.json(ApiResponse.success('اكتملت العملية', { operationId }));
 
   } catch (error) {
     // Send detailed error notification
@@ -274,9 +270,6 @@ export const adminActionWithNotification = asyncWrapper(async (req, res) => {
   try {
     const { action, targetUserId, details } = req.body;
 
-    // Log admin action
-    logger.info(`Admin action: ${action}`, { targetUserId, details });
-
     // Send notification to admins
     await telegramService.info(
       `*Admin Action*\n\n` +
@@ -286,7 +279,7 @@ export const adminActionWithNotification = asyncWrapper(async (req, res) => {
       `*Details:* ${details || 'N/A'}`
     );
 
-    res.json(ApiResponse.success('Action logged'));
+    res.json(ApiResponse.success('تم تسجيل الإجراء'));
 
   } catch (error) {
     await telegramService.error('Admin action logging failed', error);
@@ -315,7 +308,7 @@ export const sendCertificateNotificationExample = asyncWrapper(async (req, res) 
     certificateData
   );
 
-  res.json(ApiResponse.success('Certificate notification sent'));
+  res.json(ApiResponse.success('تم إرسال إخطار الشهادة'));
 });
 
 /**
@@ -330,7 +323,7 @@ export const conditionalNotificationExample = asyncWrapper(async (req, res) => {
     logger.warn('Telegram service is not configured');
   }
 
-  res.json(ApiResponse.success('Telegram status', { isReady }));
+  res.json(ApiResponse.success('حالة Telegram', { isReady }));
 });
 
 // ============================================================================

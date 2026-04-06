@@ -504,7 +504,7 @@ export class CertificateValidationService {
         logger.error(`\n❌ VALIDATION ABORTED: Integrity check failed`);
         return {
           status: 'INVALID',
-          message: 'Certificate integrity check failed',
+          message: 'عذراً، الشهادة لم تجتز فحص الأصالة - قد تكون بيانات الشهادة قد تم تعديلها',
           details: { integrity: integrityResult }
         };
       }
@@ -536,7 +536,7 @@ export class CertificateValidationService {
 
         return {
           status: 'VALID',
-          message: 'Certificate is valid and trusted',
+          message: '✅ الشهادة أصلية وموثوقة - تم التحقق من جميع طبقات الأمان بنجاح',
           layers: 3,
           details: {
             integrity: integrityResult,
@@ -549,9 +549,16 @@ export class CertificateValidationService {
         logger.error(`   At least one security layer failed verification`);
         logger.info(`${'='.repeat(80)}\n`);
 
+        // Build user-friendly message showing what failed
+        const failedLayers = [];
+        if (!integrityResult.valid) failedLayers.push('أصالة الشهادة');
+        if (!blockchainResult.valid) failedLayers.push('توثيق الشهادة في السجل');
+        if (!signatureResult.valid) failedLayers.push('التوقيعات الرسمية');
+        const failureMessage = failedLayers.join(' و ');
+
         return {
           status: 'INVALID',
-          message: 'Certificate validation failed',
+          message: `❌ الشهادة غير أصلية - فشل التحقق من: ${failureMessage}`,
           layers: 3,
           details: {
             integrity: integrityResult,
@@ -568,7 +575,7 @@ export class CertificateValidationService {
 
       return {
         status: 'ERROR',
-        message: 'Validation error',
+        message: 'عذراً، حدث خطأ أثناء التحقق من الشهادة - يرجى المحاولة مجدداً',
         detail: error.message
       };
     }

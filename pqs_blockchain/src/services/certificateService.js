@@ -64,7 +64,7 @@ export class CertificateService {
             if (!this.certificateValidationService) {
                 return {
                     status: 'ERROR',
-                    message: 'Validation service not available'
+                    message: 'عذراً، خدمة التحقق غير متاحة حالياً'
                 };
             }
 
@@ -81,10 +81,18 @@ export class CertificateService {
                 return validationResult;
             }
         } catch (error) {
+            if (error instanceof NotFoundError) {
+                const certificateNumber = cert.certificateNumber || cert.id;
+        logger.warn(`Certificate not found with number: ${certificateNumber}`);
+                return {
+                    status: 'NOT_FOUND',
+                    message: 'لا يوجد شهادة بهذا الرقم'
+                };
+            }
             logger.error(`Error validating certificate by number: ${error.message}`);
             return {
                 status: 'ERROR',
-                message: 'Error validating certificate',
+                message: 'عذراً، حدث خطأ أثناء التحقق من الشهادة',
                 detail: error.message
             };
         }
@@ -172,14 +180,11 @@ export class CertificateService {
 
             const certificate = new Certificate(certificateData);
 
-            logger.info(`🔍 Validating signatures for certificate: ${certificateId}`);
-            logger.info(`🔍 Current signature count: ${certificate.signatures.length}`);
-
             try {
                 const signaturesValid = await certificate.validateSignatures();
                 if (!signaturesValid) throw new Error('One of the previous signatures is invalid');
             } catch (validationError) {
-                logger.error(`❌ Error validating signatures: ${validationError.message}`);
+                logger.error(`Error validating signatures: ${validationError.message}`);
                 throw new Error(`Failed to validate current signatures: ${validationError.message}`);
             }
 
@@ -188,8 +193,6 @@ export class CertificateService {
             if (!userRole) {
                 throw new Error(`User ${user.id} not found or has no role`);
             }
-
-            logger.info(`✓ Signer role from database: ${userRole}`);
 
             const orderCheck = await this.validateSignatureOrderWithRoles(certificate, userRole);
             if (!orderCheck.valid) {
@@ -212,10 +215,9 @@ export class CertificateService {
 
             await this.repo.saveCertificate(certificate.toJSON());
 
-            logger.info(`✅ Added ${userRole} signature to certificate: ${certificateId}`);
             return certificate.toJSON();
         } catch (error) {
-            logger.error(`❌ Error adding signature: ${error.message}`);
+            logger.error(`Error adding signature: ${error.message}`);
             throw error;
         }
     }
@@ -230,12 +232,12 @@ export class CertificateService {
         try {
             const user = await userRepository.getUser(userId);
             if (!user || !user.role) {
-                logger.warn(`⚠️ User ${userId} not found or has no role`);
+                logger.warn(`User ${userId} not found or has no role`);
                 return null;
             }
             return user.role;
         } catch (error) {
-            logger.error(`❌ Error fetching user role from DB: ${error.message}`);
+            logger.error(`Error fetching user role from DB: ${error.message}`);
             return null;
         }
     }
@@ -253,7 +255,7 @@ export class CertificateService {
             }
             return cert;
         } catch (error) {
-            logger.error(`❌ Error searching for student certificate: ${error.message}`);
+            logger.error(`Error searching for student certificate: ${error.message}`);
             return null;
         }
     }
@@ -267,7 +269,7 @@ export class CertificateService {
             const list = await this.repo.getCertificates();
             return addStatusLabels(list);
         } catch (error) {
-            logger.error(`❌ Error retrieving all certificates: ${error.message}`);
+            logger.error(`Error retrieving all certificates: ${error.message}`);
             return [];
         }
     }
@@ -312,7 +314,7 @@ export class CertificateService {
             const updated = await this.addSignature(certificateId, signatureData, user);
             return updated;
         } catch (error) {
-            logger.error(`❌ Error signing certificate as ${role}: ${error.message}`);
+            logger.error(`Error signing certificate as ${role}: ${error.message}`);
             throw error;
         }
     }
@@ -334,7 +336,7 @@ export class CertificateService {
                 await this.blockchainService.syncPendingFromDB();
             }
         } catch (err) {
-            logger.error(`❌ Failed to enqueue certificate for mining: ${err.message}`);
+            logger.error(`Failed to enqueue certificate for mining: ${err.message}`);
         }
 
         return updatedCertificate;
@@ -360,7 +362,7 @@ export class CertificateService {
 
             await this.repo.saveCertificate(certificate.toJSON());
 
-            logger.info(`✅ Set status ${status} for certificate: ${certificateId}`);
+            logger.info(`Set status ${status} for certificate: ${certificateId}`);
             return certificate.toJSON();
         } catch (error) {
             logger.error(`❌ Error setting certificate status: ${error.message}`);
@@ -401,8 +403,8 @@ export class CertificateService {
 
         await this.repo.saveCertificate(certificate.toJSON());
 
-        logger.info(`✅ Created and signed new certificate: ${certificate.id}`);
-        logger.info(`   Certificate Hash (immutable): ${certificate.certificateHash}`);
+        logger.info(`Created and signed new certificate: ${certificate.id}`);
+        logger.info(`Hash: ${certificate.certificateHash}`);
         return certificate.toJSON();
     }
 }

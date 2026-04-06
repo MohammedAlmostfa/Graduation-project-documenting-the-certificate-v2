@@ -25,10 +25,6 @@ const registerGlobalMiddleware = (app) => {
   });
 
   app.use((req, res, next) => {
-    logger.info(`${req.method} ${req.originalUrl}`, {
-      ip: req.ip,
-      userAgent: req.get('User-Agent')
-    });
     next();
   });
 };
@@ -39,7 +35,7 @@ const registerRoutes = (app) => {
   app.use('/api/admin', adminRoutes);
 
   app.get('/', (_req, res) => {
-    res.json(ApiResponse.success('🏫 نظام الشهادات الجامعية الموزع', {
+    res.json(ApiResponse.success('نظام الشهادات الجامعية الموزع', {
       version: process.env.npm_package_version || '1.0.0',
       endpoints: {
         certificates: '/api/certificates',

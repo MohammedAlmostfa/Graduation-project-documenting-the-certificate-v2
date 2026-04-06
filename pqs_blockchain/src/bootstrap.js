@@ -52,9 +52,8 @@ export const initServices = async () => {
   try {
     await keyService.initDefaultUsers();
     await blockchainService.initialize();
-    logger.info('✅ Application services initialized successfully');
   } catch (error) {
-    logger.error(`❌ Service initialization failed: ${error.message}`, error);
+    logger.error(`Service initialization failed: ${error.message}`, error);
     throw error;
   }
 };

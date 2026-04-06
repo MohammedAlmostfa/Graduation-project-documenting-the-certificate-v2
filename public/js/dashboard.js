@@ -56,7 +56,7 @@ function displayBlockchain() {
     }
 
     container.innerHTML = blockchainData.map((block, index) => {
-        const isGenesis = block.index === 0;
+        const isGenesis = index === 0;
         const certs = Array.isArray(block.certificateIds)
             ? block.certificateIds
             : Array.isArray(block.data)
@@ -67,7 +67,7 @@ function displayBlockchain() {
         return `
             <div class="block ${isGenesis ? 'genesis' : ''}" onclick="showBlockDetails(${index})">
                 <div class="block-mini-header">
-                    <div class="block-number">${isGenesis ? '🔰' : '#' + block.index}</div>
+                    <div class="block-number">${isGenesis ? '🔰' : '#' + index}</div>
                 </div>
 
                 <div class="block-mini-info">
@@ -150,9 +150,9 @@ function updateStats() {
 // Modal Functions
 function showBlockDetails(index) {
     const block = blockchainData[index];
-    const isGenesis = block.index === 0;
+    const isGenesis = index === 0;
     const certs = Array.isArray(block.certificateIds)
-        ? block.certificateIds.map(id => ({ id }))
+        ? block.certificateIds.map(id => (typeof id === 'string' ? { id } : id))
         : Array.isArray(block.data)
             ? block.data.filter(d => d.type === 'certificate')
             : [];
@@ -160,7 +160,7 @@ function showBlockDetails(index) {
     const modalContent = `
         <div class="modal-header ${isGenesis ? 'genesis' : ''}">
             <button class="modal-close" onclick="closeModal()">×</button>
-            <div class="modal-title">${isGenesis ? '🔰 الكتلة التأسيسية' : 'كتلة #' + block.index}</div>
+            <div class="modal-title">${isGenesis ? '🔰 الكتلة التأسيسية' : 'كتلة #' + index}</div>
             <div class="modal-subtitle">${new Date(block.timestamp).toLocaleString('ar-EG')}</div>
         </div>
 
@@ -170,7 +170,7 @@ function showBlockDetails(index) {
                 <div class="info-grid">
                     <div class="info-box">
                         <div class="info-box-label">رقم الكتلة</div>
-                        <div class="info-box-value">#${block.index}</div>
+                        <div class="info-box-value">#${index}</div>
                     </div>
                     <div class="info-box">
                         <div class="info-box-label">عدد الشهادات</div>
@@ -214,7 +214,7 @@ function showBlockDetails(index) {
                         <div class="hash-value-modal">${formatHash(block.previousHash)}</div>
                     </div>
                     <div style="text-align:center;margin-top:10px;color:#666;font-size:0.9em;">
-                        ✓ هذا الـ Hash مطابق لـ Hash الكتلة #${block.index - 1}
+                        ✓ هذا الـ Hash مطابق لـ Hash الكتلة #${index - 1}
                     </div>
                 </div>
             ` : ''}

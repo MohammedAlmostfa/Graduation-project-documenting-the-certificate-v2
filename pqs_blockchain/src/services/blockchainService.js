@@ -43,8 +43,7 @@ export class BlockchainService {
 
                     const block = Object.assign(new Block(), normalizedData);
 
-                    // DEBUG: Log types when loading
-                    logger.debug(`📥 [LOAD_BLOCK] Block #${block.id} types: id=${typeof block.id}, nonce=${typeof block.nonce}, difficulty=${typeof block.difficulty}`);
+
 
                     // Validate hash integrity during load
                     const validation = oqsCrypto.validateBlockHashes(block);
@@ -68,12 +67,8 @@ export class BlockchainService {
 
                 this.blockchain.pendingCertificates = [];
                 this.blockchain.pendingCertificateIds = new Set();
-                logger.info('Blockchain loaded from storage');
-            } else {
-                logger.info('Initialized new blockchain');
             }
         } catch (error) {
-            logger.info('Starting new blockchain - no previous data found');
         }
     }
 
@@ -84,7 +79,6 @@ export class BlockchainService {
             const pending = await this.certificateService.repo.getCertificatesByStatus(certificateStatus.BLOCKCHAIN_ADDED);
             this.blockchain.pendingCertificates = pending || [];
             this.blockchain.pendingCertificateIds = new Set((pending || []).map(c => c.id));
-            logger.info(`Synchronized ${this.blockchain.pendingCertificates.length} pending certificates`);
         } catch (err) {
             logger.error(`Unable to sync pending certificates: ${err.message}`);
         }
@@ -94,7 +88,6 @@ export class BlockchainService {
     async saveBlockchain() {
         try {
             await this.repo.saveChain(this.blockchain.toJSON());
-            logger.info('Blockchain state saved');
         } catch (error) {
             logger.error(`Error saving blockchain: ${error.message}`);
             throw error;
@@ -113,7 +106,6 @@ export class BlockchainService {
             }
             this.blockchain.addCertificateToPending(certificate);
             await this.saveBlockchain();
-            logger.info(`Certificate ${certificateId} enqueued`);
             return {
                 certificateId,
                 status: 'pending',
@@ -138,7 +130,6 @@ export class BlockchainService {
 
             const pendingCertificates = this.blockchain.pendingCertificates;
             if (!pendingCertificates || pendingCertificates.length === 0) {
-                logger.debug('No pending certificates to mine');
                 return null;
             }
 
@@ -151,15 +142,6 @@ export class BlockchainService {
             const nextBlockId = lastBlockFromDB.nextId;
             const previousHashFromDB = lastBlockFromDB.hash;
 
-            logger.debug(`🔗 Chain state from DB:`);
-            logger.debug(`   Last block id: ${lastBlockFromDB.id}`);
-            logger.debug(`   Next block id: ${nextBlockId}`);
-            logger.debug(`   Previous hash: ${previousHashFromDB.substring(0, 16)}...`);
-
-            // CRITICAL: Create snapshot of certificate hashes to prevent merkle root mismatch
-            // This ensures: same certificates = same merkle root
-            // Even if DB is modified after snapshot, our merkle root remains stable
-            logger.debug(`📸 Creating certificate hash snapshot for merkle tree...`);
             const certificateIds = pendingCertificates.map(c => c.id);
             const certHashSnapshot = {};
 
@@ -182,25 +164,14 @@ export class BlockchainService {
             }
 
             // Extract hashes in stable order (sorted by certificate ID for determinism)
-            // MerkleTree will also sort internally, but we log the original order for debugging
             const sortedCertIds = certificateIds.sort();
             const certHashes = sortedCertIds
                 .filter(id => certHashSnapshot[id])
                 .map(id => certHashSnapshot[id]);
 
-            logger.debug(`📦 Certificate snapshot: ${certHashes.length} certificates`);
-            logger.debug(`   IDs (sorted): ${sortedCertIds.slice(0, 3).join(', ')}${sortedCertIds.length > 3 ? '...' : ''}`);
-
             // MerkleTree constructor sorts leaves internally for deterministic computation
-            // This means: [cert_a, cert_b, cert_c] and [cert_c, cert_b, cert_a] produce same root
-            const merkleTree = new MerkleTree(certHashes, true);  // true = sort leaves
+            const merkleTree = new MerkleTree(certHashes, true);
             const merkleRoot = merkleTree.getRoot();
-            const treeInfo = merkleTree.getTreeInfo();
-
-            logger.debug(`🌳 Merkle tree computed:`);
-            logger.debug(`   Root: ${merkleRoot?.substring(0, 16)}...`);
-            logger.debug(`   Leaves (sorted): ${treeInfo.isSorted ? 'YES' : 'NO'}`);
-            logger.debug(`   Height: ${treeInfo.height}`);
 
             if (!merkleRoot || merkleRoot === '') {
                 throw new Error('Invalid Merkle Root: cannot be empty');
@@ -214,7 +185,6 @@ export class BlockchainService {
                 previousHashFromDB  // ← NEW: Pass actual previousHash from DB
             );
             if (!result) {
-                logger.debug('No pending certificates to mine');
                 return null;
             }
 
