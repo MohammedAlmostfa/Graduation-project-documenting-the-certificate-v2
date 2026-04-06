@@ -32,3 +32,4 @@ export class ForbiddenError extends AppError {
     super(message, 'FORBIDDEN', 403, details);
   }
 }
+

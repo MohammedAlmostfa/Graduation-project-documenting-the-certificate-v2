@@ -116,8 +116,8 @@ export class MySQLDB {
     return this._execute(conn => ChainQueries.insertBlock(conn, block, merkleRoot));
   }
 
-  async minePendingCertificatesAtomic(block, certificates, merkleRoot, certificateRepo, blockIndex) {
-    return this._execute(conn => ChainQueries.minePendingCertificatesAtomic(conn, block, certificates, merkleRoot, certificateRepo, blockIndex));
+  async minePendingCertificatesAtomic(block, certificates, merkleRoot, certificateRepo, blockId) {
+    return this._execute(conn => ChainQueries.minePendingCertificatesAtomic(conn, block, certificates, merkleRoot, certificateRepo, blockId));
   }
 
   async getBlockByIndex(index) {
@@ -167,3 +167,4 @@ export const mysqlDB = new Proxy({}, {
     return _instance[prop];
   }
 });
+

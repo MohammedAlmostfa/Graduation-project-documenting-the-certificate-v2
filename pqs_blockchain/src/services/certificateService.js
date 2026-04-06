@@ -352,8 +352,8 @@ export class CertificateService {
 
             if (extras.transactionHash !== undefined) certificate.transactionHash = extras.transactionHash;
             if (extras.blockId !== undefined) certificate.blockId = extras.blockId;
-            if (extras.blockIndex !== undefined) certificate.blockIndex = extras.blockIndex;
-            if (extras.blockNumber !== undefined) certificate.blockIndex = extras.blockNumber; // WHY: كلاهما يُعيّن blockIndex لضمان التوافق مع الكود القديم والجديد
+            if (extras.blockId !== undefined) certificate.blockId = extras.blockId;
+            if (extras.blockNumber !== undefined) certificate.blockId = extras.blockNumber; // WHY: كلاهما يُعيّن blockId لضمان التوافق مع الكود القديم والجديد
 
             certificate.status = status;
             certificate.updatedAt = new Date().toISOString();
@@ -406,3 +406,4 @@ export class CertificateService {
         return certificate.toJSON();
     }
 }
+

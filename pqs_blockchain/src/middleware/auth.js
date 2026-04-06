@@ -91,3 +91,4 @@ export const auth = {
      * Shortcut middlewares for specific roles (now using constants)
      */
 };
+

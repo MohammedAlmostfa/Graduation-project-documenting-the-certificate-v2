@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('blockchain', function (Blueprint $table) {
             $table->id();
-            $table->integer('block_index')->unique();
+
             $table->dateTime('timestamp');
             $table->string('previous_hash');
             $table->string('hash')->unique();
@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('merkle_root')->default('');
             $table->timestamps();
 
-            $table->index('block_index', 'idx_block_index');
+
             $table->index('previous_hash', 'idx_previous_hash');
             $table->index('merkle_root', 'idx_merkle_root');
         });

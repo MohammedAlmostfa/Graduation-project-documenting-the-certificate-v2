@@ -125,3 +125,4 @@ export const certificateController = {
      */
     // manual addToBlockchain removed — president sign now queues certificates automatically
 };
+

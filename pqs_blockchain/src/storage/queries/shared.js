@@ -68,3 +68,4 @@ export function formatDateIfPresent(dateField) {
 export function formatDateTimeIfPresent(dateTimeField) {
   return hasValue(dateTimeField) ? formatDateTimeNoTZ(dateTimeField) : null;
 }
+

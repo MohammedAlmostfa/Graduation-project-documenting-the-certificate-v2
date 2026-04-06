@@ -42,3 +42,4 @@ class KeyRepository extends BaseRepository {
 
 // Export a single repository instance
 export const keyRepository = new KeyRepository();
+

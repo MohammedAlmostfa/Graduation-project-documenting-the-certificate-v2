@@ -20,3 +20,4 @@ export class UserIdRequest {
         return this.userId.trim();
     }
 }
+

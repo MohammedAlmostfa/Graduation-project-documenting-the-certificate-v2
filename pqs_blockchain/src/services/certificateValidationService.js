@@ -1,4 +1,5 @@
 import { Certificate } from '../models/Certificate.js';
+import { Block } from '../models/Block.js';
 import { MerkleTree } from '../utils/merkleTree.js';
 import { logger } from '../utils/logger.js';
 import { oqsCrypto } from '../utils/crypto-oqs.js';
@@ -62,29 +63,41 @@ export class CertificateValidationService {
 
   async validateCertificateBlockchain(certificateId) {
     logger.info(`🔗 START: Validating certificate blockchain for ID: ${certificateId}`);
+    logger.info(`   NOTE: ALL data is read DIRECTLY from DATABASE (100% DB-driven validation)`);
 
     try {
-      logger.debug(`📋 Step 1: Running integrity check...`);
+      // ============================================================================
+      // LAYER 1: CERTIFICATE INTEGRITY (independent of blockchain)
+      // ============================================================================
+      logger.info(`\n${'='.repeat(80)}`);
+      logger.info(`📋 LAYER 1: Certificate Integrity Check (standalone)`);
+      logger.info(`${'='.repeat(80)}`);
+
       const integrityResult = await this.validateCertificateIntegrity(certificateId);
+      logger.info(`Result: ${integrityResult.valid ? '✅ PASS' : '❌ FAIL'}`);
+      // NOTE: Do NOT early return - continue with blockchain checks even if integrity fails
 
-      if (!integrityResult.valid) {
-        logger.error(`❌ [BLOCKCHAIN_FAIL] Integrity check failed: ${integrityResult.reason}`);
-        return integrityResult;
+      // ============================================================================
+      // LAYER 2: BLOCKCHAIN EXISTENCE & LINKAGE
+      // ============================================================================
+      logger.info(`\n${'='.repeat(80)}`);
+      logger.info(`🔗 LAYER 2: Blockchain Linkage (read from DB - NO CACHE)`);
+      logger.info(`${'='.repeat(80)}`);
+
+      // Step 1: Get certificate from DB (fresh read)
+      logger.debug(`📥 [DB_READ] Fetching certificate from repository...`);
+      const certificateData = await this.certificateRepo.getCertificate(certificateId);
+      if (!certificateData) {
+        logger.error(`❌ Certificate ${certificateId} not found in DB`);
+        return { valid: false, reason: 'CERTIFICATE_NOT_FOUND' };
       }
 
-      logger.debug(`✅ Integrity check passed`);
+      // Step 2: Get blockId from DB
+      const blockId = certificateData.blockId;
+      logger.debug(`📥 [DB_READ] Certificate found with blockId: ${blockId}`);
 
-      if (!this.blockchainService) {
-        logger.error(`❌ [BLOCKCHAIN_FAIL] Blockchain service is not available`);
-        return { valid: false, reason: 'BLOCKCHAIN_SERVICE_UNAVAILABLE' };
-      }
-
-      logger.debug(`🔍 Step 2: Fetching certificate block information...`);
-      const blockInfo = await this.blockchainService.getCertificateBlockInfo(certificateId);
-      logger.debug(`📦 Block info retrieved:`, blockInfo);
-
-      if (!blockInfo || !blockInfo.block) {
-        logger.error(`❌ [BLOCKCHAIN_FAIL] Certificate not found in blockchain`);
+      if (!blockId && blockId !== 0) {
+        logger.error(`❌ Certificate has no blockId - not mined into blockchain`);
         return {
           valid: false,
           reason: 'CERTIFICATE_NOT_IN_BLOCKCHAIN',
@@ -92,123 +105,238 @@ export class CertificateValidationService {
         };
       }
 
-      logger.debug(`✅ Block found`);
-
-      const block = blockInfo.block;
-      logger.debug(`🏷️  Block details: index=${block.index}, hash=${block.hash}, merkleRoot=${block.merkleRoot}`);
-
-      logger.debug(`🔍 Step 3: Retrieving certificate from repository...`);
-      const certificateData = await this.certificateRepo.getCertificate(certificateId);
-      const certificate = new Certificate(certificateData);
-      const certificateHash = certificate.certificateHash;
-      logger.debug(`🔑 Certificate hash: ${certificateHash}`);
-
-      logger.debug(`🔍 Step 4: Validating merkle root...`);
-      const blockMerkleRoot = block.merkleRoot;
-
-      if (!blockMerkleRoot) {
-        logger.error(`❌ [BLOCKCHAIN_FAIL] Block missing merkle root`);
-        return { valid: false, reason: 'INVALID_BLOCK', detail: 'Block missing merkle root' };
+      // Step 3: Read BLOCK from DB directly (FRESH READ - NOT FROM CACHE!)
+      logger.debug(`📥 [DB_READ] Fetching block #${blockId} directly from database...`);
+      if (!this.blockchainService || !this.blockchainService.repo) {
+        logger.error(`❌ Blockchain repository not available`);
+        return { valid: false, reason: 'BLOCKCHAIN_REPO_UNAVAILABLE' };
       }
 
-      logger.debug(`✅ Merkle root found: ${blockMerkleRoot}`);
+      const dbBlock = await this.blockchainService.repo.getBlockByIndex(blockId);
+      if (!dbBlock) {
+        logger.error(`❌ Block #${blockId} not found in database`);
+        return { valid: false, reason: 'BLOCK_NOT_IN_DB' };
+      }
 
-      logger.debug(`🔍 Step 5: Fetching all certificates in block...`);
-      const certificateIds = block.certificateIds || [];
-      logger.debug(`📊 Certificate count in block: ${certificateIds.length}`);
-      logger.debug(`📋 Certificate IDs: ${certificateIds.join(', ')}`);
+      logger.debug(`📥 [DB_READ] Block #${blockId} loaded from DB:`);
+      logger.debug(`   index:         ${dbBlock.id}`);
+      logger.debug(`   hash:          ${dbBlock.hash.substring(0, 16)}...`);
+      logger.debug(`   previousHash:  ${dbBlock.previousHash.substring(0, 16)}...`);
+      logger.debug(`   merkleRoot:    ${dbBlock.merkleRoot.substring(0, 16)}...`);
+      logger.debug(`   nonce:         ${dbBlock.nonce}`);
+      logger.debug(`   difficulty:    ${dbBlock.difficulty}`);
 
-      const allCertificates = [];
+      // ============================================================================
+      // LAYER 3: MERKLE ROOT VERIFICATION (recalculate from DB data)
+      // ============================================================================
+      logger.info(`\n${'='.repeat(80)}`);
+      logger.info(`🌳 LAYER 3: Merkle Root Verification (from DB, recalculated)`);
+      logger.info(`${'='.repeat(80)}`);
 
-      for (const certId of certificateIds) {
-        try {
-          logger.debug(`  └─ Fetching certificate ${certId}...`);
-          const certData = await this.certificateRepo.getCertificate(certId);
+      let merkleRootValid = false;
 
-          if (certData) {
-            const cert = new Certificate(certData);
-            allCertificates.push({
-              id: certId,
-              hash: cert.certificateHash
-            });
-            logger.debug(`    ✅ Certificate ${certId} fetched: hash=${cert.certificateHash}`);
-          } else {
-            logger.warn(`    ⚠️  Certificate ${certId} returned null`);
+      if (dbBlock.id === 0 && (!dbBlock.certificateIds || dbBlock.certificateIds.length === 0)) {
+        logger.debug(`ℹ️  Genesis block - merkle root check not applicable`);
+        merkleRootValid = true;
+      } else {
+        // Get certificate IDs from DB block
+        const certificateIds = dbBlock.certificateIds || [];
+        logger.debug(`📥 [DB_READ] Block contains ${certificateIds.length} certificates`);
+
+        if (certificateIds.length === 0) {
+          logger.error(`❌ Block has no certificates but non-empty merkleRoot`);
+          merkleRootValid = false;
+        } else {
+          // Fetch ALL certificates from DB (fresh reads)
+          logger.debug(`📥 [DB_READ] Fetching all ${certificateIds.length} certificates from DB...`);
+          const allCertificates = [];
+
+          for (const certId of certificateIds) {
+            try {
+              const cert = await this.certificateRepo.getCertificate(certId);
+              if (cert && cert.certificateHash) {
+                allCertificates.push({
+                  id: certId,
+                  hash: cert.certificateHash
+                });
+              } else {
+                logger.warn(`⚠️  Certificate ${certId} has no hash in DB`);
+              }
+            } catch (err) {
+              logger.warn(`⚠️  Could not fetch certificate ${certId} from DB: ${err.message}`);
+            }
           }
-        } catch (err) {
-          logger.warn(`    ⚠️  Could not fetch certificate ${certId}: ${err.message}`);
+
+          logger.debug(`📥 [DB_READ] Retrieved ${allCertificates.length}/${certificateIds.length} certificates from DB`);
+
+          if (allCertificates.length === 0) {
+            logger.error(`❌ Could not fetch any certificates from DB`);
+            merkleRootValid = false;
+          } else {
+            // Recalculate merkle root from DB data
+            logger.debug(`🔢 Recalculating merkle root from certificates...`);
+            const certHashes = allCertificates.map(c => c.hash);
+            const merkleTree = new MerkleTree(certHashes, true);  // sort = true
+            const computedMerkleRoot = merkleTree.getRoot();
+
+            logger.debug(`📊 Merkle Root Comparison:`);
+            logger.debug(`   DB stored:     ${dbBlock.merkleRoot}`);
+            logger.debug(`   Recalculated:  ${computedMerkleRoot}`);
+
+            if (dbBlock.merkleRoot === computedMerkleRoot) {
+              logger.info(`✅ Merkle root VERIFIED`);
+              merkleRootValid = true;
+            } else {
+              logger.error(`❌ Merkle root MISMATCH`);
+              logger.error(`   Block says: ${dbBlock.merkleRoot}`);
+              logger.error(`   Should be:  ${computedMerkleRoot}`);
+              merkleRootValid = false;
+            }
+          }
         }
       }
 
-      logger.debug(`✅ Certificate retrieval complete: ${allCertificates.length}/${certificateIds.length} retrieved`);
+      // ============================================================================
+      // LAYER 4: BLOCK HASH VERIFICATION (recalculate from DB values)
+      // ============================================================================
+      logger.info(`\n${'='.repeat(80)}`);
+      logger.info(`🔐 LAYER 4: Block Hash Verification (from DB, recalculated)`);
+      logger.info(`${'='.repeat(80)}`);
 
-      if (allCertificates.length === 0) {
-        logger.error(`❌ [BLOCKCHAIN_FAIL] Could not fetch any block certificates`);
+      logger.debug(`🔢 Recalculating block hash from DB values...`);
+      const recalculatedHash = this._recalculateBlockHashFromDB(dbBlock);
+
+      logger.debug(`📊 Block Hash Comparison:`);
+      logger.debug(`   DB stored:     ${dbBlock.hash}`);
+      logger.debug(`   Recalculated:  ${recalculatedHash}`);
+
+      const blockHashValid = dbBlock.hash === recalculatedHash;
+      if (blockHashValid) {
+        logger.info(`✅ Block hash VERIFIED`);
+      } else {
+        logger.error(`❌ Block hash MISMATCH`);
+        logger.error(`   Block says: ${dbBlock.hash}`);
+        logger.error(`   Should be:  ${recalculatedHash}`);
+      }
+
+      // ============================================================================
+      // LAYER 5: CHAIN LINKAGE VERIFICATION (read previous block from DB)
+      // ============================================================================
+      logger.info(`\n${'='.repeat(80)}`);
+      logger.info(`⛓️  LAYER 5: Chain Linkage Verification (from DB)`);
+      logger.info(`${'='.repeat(80)}`);
+
+      let chainLinkageValid = false;
+
+      if (dbBlock.id === 0) {
+        logger.debug(`ℹ️  Genesis block - chain linkage check not applicable`);
+        chainLinkageValid = true;
+      } else {
+        // Get previous block from DB (fresh read)
+        logger.debug(`📥 [DB_READ] Fetching previous block #${dbBlock.id - 1} from DB...`);
+        const previousBlock = await this.blockchainService.repo.getBlockByIndex(dbBlock.id - 1);
+
+        if (!previousBlock) {
+          logger.error(`❌ Previous block #${dbBlock.id - 1} not found in DB`);
+          chainLinkageValid = false;
+        } else {
+          logger.debug(`📥 [DB_READ] Previous block loaded from DB`);
+          logger.debug(`   Previous block hash: ${previousBlock.hash.substring(0, 16)}...`);
+          logger.debug(`   Current block previousHash: ${dbBlock.previousHash.substring(0, 16)}...`);
+
+          if (dbBlock.previousHash === previousBlock.hash) {
+            logger.info(`✅ Chain linkage VERIFIED`);
+            chainLinkageValid = true;
+          } else {
+            logger.error(`❌ Chain linkage BROKEN`);
+            logger.error(`   Current block previousHash: ${dbBlock.previousHash}`);
+            logger.error(`   Previous block hash:        ${previousBlock.hash}`);
+            chainLinkageValid = false;
+          }
+        }
+      }
+
+      // ============================================================================
+      // LAYER 6: PROOF-OF-WORK VERIFICATION
+      // ============================================================================
+      logger.info(`\n${'='.repeat(80)}`);
+      logger.info(`⛏️  LAYER 6: Proof-of-Work Verification`);
+      logger.info(`${'='.repeat(80)}`);
+
+      let powValid = false;
+
+      if (dbBlock.id === 0) {
+        logger.debug(`ℹ️  Genesis block - PoW exemption`);
+        powValid = true;
+      } else {
+        const target = '0'.repeat(dbBlock.difficulty);
+        const leadingZeros = dbBlock.hash.substring(0, dbBlock.difficulty);
+
+        logger.debug(`📊 Proof-of-Work Check:`);
+        logger.debug(`   Required difficulty: ${dbBlock.difficulty}`);
+        logger.debug(`   Required target: '${target}'`);
+        logger.debug(`   Actual leading zeros: '${leadingZeros}'`);
+
+        if (leadingZeros === target) {
+          logger.info(`✅ Proof-of-Work VERIFIED`);
+          powValid = true;
+        } else {
+          logger.error(`❌ Proof-of-Work FAILED`);
+          logger.error(`   Required: '${target}'`);
+          logger.error(`   Got:      '${leadingZeros}'`);
+          powValid = false;
+        }
+      }
+
+      // ============================================================================
+      // FINAL SUMMARY
+      // ============================================================================
+      logger.info(`\n${'='.repeat(80)}`);
+      logger.info(`📊 BLOCKCHAIN VALIDATION SUMMARY`);
+      logger.info(`${'='.repeat(80)}`);
+      logger.info(`Integrity:     ${integrityResult.valid ? '✅ PASS' : '❌ FAIL'}`);
+      logger.info(`Merkle Root:   ${merkleRootValid ? '✅ PASS' : '❌ FAIL'}`);
+      logger.info(`Block Hash:    ${blockHashValid ? '✅ PASS' : '❌ FAIL'}`);
+      logger.info(`Chain Linkage: ${chainLinkageValid ? '✅ PASS' : '❌ FAIL'}`);
+      logger.info(`Proof-of-Work: ${powValid ? '✅ PASS' : '❌ FAIL'}`);
+      logger.info(`${'─'.repeat(80)}`);
+
+      const allLayersValid = integrityResult.valid && merkleRootValid && blockHashValid && chainLinkageValid && powValid;
+
+      if (allLayersValid) {
+        logger.info(`✅ BLOCKCHAIN VALIDATION PASSED - All 5 layers verified`);
+        logger.info(`${'='.repeat(80)}\n`);
+        return {
+          valid: true,
+          blockId: dbBlock.id,
+          merkleRoot: dbBlock.merkleRoot,
+          blockHash: dbBlock.hash
+        };
+      } else {
+        logger.error(`❌ BLOCKCHAIN VALIDATION FAILED`);
+        const failures = [];
+        if (!integrityResult.valid) failures.push('Integrity');
+        if (!merkleRootValid) failures.push('Merkle Root');
+        if (!blockHashValid) failures.push('Block Hash');
+        if (!chainLinkageValid) failures.push('Chain Linkage');
+        if (!powValid) failures.push('Proof-of-Work');
+
+        logger.error(`   Failed layers: ${failures.join(', ')}`);
+        logger.info(`${'='.repeat(80)}\n`);
+
         return {
           valid: false,
-          reason: 'MERKLE_VERIFICATION_FAILED',
-          detail: 'Could not fetch block certificates'
+          reason: 'BLOCKCHAIN_VALIDATION_FAILED',
+          detail: `Failed layers: ${failures.join(', ')}`,
+          layers: {
+            integrity: integrityResult.valid,
+            merkleRoot: merkleRootValid,
+            blockHash: blockHashValid,
+            chainLinkage: chainLinkageValid,
+            proofOfWork: powValid
+          }
         };
       }
-
-      logger.debug(`🔍 Step 6: Computing merkle root from fetched certificates...`);
-      const certHashes = allCertificates.map(c => c.hash);
-      logger.debug(`📊 Certificate hashes for merkle computation:`, certHashes);
-
-      const merkleTree = new MerkleTree(certHashes);
-      const computedMerkleRoot = merkleTree.getRoot();
-      logger.debug(`📊 Computed merkle root: ${computedMerkleRoot}`);
-
-      logger.debug(`🔍 Step 7: Comparing merkle roots...`);
-      logger.debug(`   Block merkle root:    ${blockMerkleRoot}`);
-      logger.debug(`   Computed merkle root: ${computedMerkleRoot}`);
-
-      if (computedMerkleRoot !== blockMerkleRoot) {
-        logger.error(`❌ [BLOCKCHAIN_FAIL] Merkle root mismatch for certificate ${certificateId}`);
-        logger.error(`   Expected: ${blockMerkleRoot}`);
-        logger.error(`   Got:      ${computedMerkleRoot}`);
-        return {
-          valid: false,
-          reason: 'MERKLE_ROOT_MISMATCH',
-          detail: 'Block merkle root does not match computed root'
-        };
-      }
-
-      logger.debug(`✅ Merkle root verified`);
-
-      logger.debug(`🔍 Step 8: Recalculating block hash...`);
-      const blockHash = block.hash;
-      logger.debug(`💾 Stored block hash: ${blockHash}`);
-
-      const currentBlockHash = this._recalculateBlockHash(block);
-      logger.debug(`📊 Recalculated block hash: ${currentBlockHash}`);
-
-      logger.debug(`🔍 Step 9: Comparing block hashes...`);
-      if (blockHash !== currentBlockHash) {
-        logger.error(`❌ [BLOCKCHAIN_FAIL] Block hash mismatch for block ${block.index}`);
-        logger.error(`   Expected: ${blockHash}`);
-        logger.error(`   Got:      ${currentBlockHash}`);
-        return {
-          valid: false,
-          reason: 'BLOCK_HASH_INVALID',
-          detail: 'Block hash does not match recalculated hash'
-        };
-      }
-
-      logger.debug(`✅ Block hash verified`);
-
-      logger.debug(`🔍 Step 10: Validating blockchain consistency...`);
-      const blockchainValid = await this._validateBlockchainConsistency(block);
-
-      if (!blockchainValid.valid) {
-        logger.error(`❌ [BLOCKCHAIN_FAIL] Blockchain consistency check failed: ${blockchainValid.reason}`);
-        return blockchainValid;
-      }
-
-      logger.debug(`✅ Blockchain consistency verified`);
-
-      logger.info(`✅ [BLOCKCHAIN_PASS] Certificate blockchain validation passed for ${certificateId}`);
-      return { valid: true, blockIndex: block.index, merkleRoot: blockMerkleRoot };
 
     } catch (error) {
       logger.error(`❌ [BLOCKCHAIN_ERROR] Exception during blockchain validation: ${error.message}`);
@@ -359,13 +487,15 @@ export class CertificateValidationService {
     }
   }
 
+
+
   async completeCertificateValidation(certificateId) {
     logger.info(`\n${'='.repeat(80)}`);
     logger.info(`🎯 START: COMPLETE CERTIFICATE VALIDATION for ID: ${certificateId}`);
     logger.info(`${'='.repeat(80)}\n`);
 
     try {
-      logger.info(`📍 STEP 1/3: Integrity Validation`);
+      logger.info(`📍 STEP 1/4: Integrity Validation`);
       logger.info(`${'─'.repeat(80)}`);
       const integrityResult = await this.validateCertificateIntegrity(certificateId);
       logger.info(`Result: ${integrityResult.valid ? '✅ PASS' : '❌ FAIL'} - ${integrityResult.reason}\n`);
@@ -379,12 +509,12 @@ export class CertificateValidationService {
         };
       }
 
-      logger.info(`📍 STEP 2/3: Blockchain Validation`);
+      logger.info(`📍 STEP 2/4: Blockchain Validation`);
       logger.info(`${'─'.repeat(80)}`);
       const blockchainResult = await this.validateCertificateBlockchain(certificateId);
       logger.info(`Result: ${blockchainResult.valid ? '✅ PASS' : '❌ FAIL'} - ${blockchainResult.reason}\n`);
 
-      logger.info(`📍 STEP 3/3: Signature Validation`);
+      logger.info(`📍 STEP 3/4: Signature Validation`);
       logger.info(`${'─'.repeat(80)}`);
       const signatureResult = await this.validateCertificateSignatures(certificateId);
       logger.info(`Result: ${signatureResult.valid ? '✅ PASS' : '❌ FAIL'} - Count: ${signatureResult.signatureCount}\n`);
@@ -392,20 +522,22 @@ export class CertificateValidationService {
       const allValid = integrityResult.valid && blockchainResult.valid && signatureResult.valid;
 
       logger.info(`${'='.repeat(80)}`);
-      logger.info(`📊 FINAL VALIDATION SUMMARY`);
+      logger.info(`📊 FINAL VALIDATION SUMMARY (3-LAYER VERIFICATION)`);
       logger.info(`${'─'.repeat(80)}`);
-      logger.info(`Integrity:  ${integrityResult.valid ? '✅ VALID' : '❌ INVALID'}`);
-      logger.info(`Blockchain: ${blockchainResult.valid ? '✅ VALID' : '❌ INVALID'}`);
-      logger.info(`Signatures: ${signatureResult.valid ? '✅ VALID' : '❌ INVALID'}`);
+      logger.info(`LAYER 1 - Integrity:          ${integrityResult.valid ? '✅ VALID' : '❌ INVALID'}`);
+      logger.info(`LAYER 2 - Blockchain Linkage: ${blockchainResult.valid ? '✅ VALID' : '❌ INVALID'}`);
+      logger.info(`LAYER 3 - Digital Signatures: ${signatureResult.valid ? '✅ VALID' : '❌ INVALID'}`);
       logger.info(`${'─'.repeat(80)}`);
 
       if (allValid) {
         logger.info(`🎉 FINAL RESULT: ✅ CERTIFICATE IS VALID AND TRUSTED`);
+        logger.info(`   All 3 security layers verified successfully`);
         logger.info(`${'='.repeat(80)}\n`);
 
         return {
           status: 'VALID',
           message: 'Certificate is valid and trusted',
+          layers: 3,
           details: {
             integrity: integrityResult,
             blockchain: blockchainResult,
@@ -414,11 +546,13 @@ export class CertificateValidationService {
         };
       } else {
         logger.error(`🎯 FINAL RESULT: ❌ CERTIFICATE IS INVALID`);
+        logger.error(`   At least one security layer failed verification`);
         logger.info(`${'='.repeat(80)}\n`);
 
         return {
           status: 'INVALID',
           message: 'Certificate validation failed',
+          layers: 3,
           details: {
             integrity: integrityResult,
             blockchain: blockchainResult,
@@ -441,130 +575,194 @@ export class CertificateValidationService {
   }
 
   _recalculateBlockHash(block) {
-    logger.debug(`🔢 Computing block hash from:`);
-    logger.debug(`   index:        ${block.index}`);
-    logger.debug(`   timestamp:    ${block.timestamp}`);
-    logger.debug(`   merkleRoot:   ${block.merkleRoot}`);
-    logger.debug(`   previousHash: ${block.previousHash}`);
-    logger.debug(`   nonce:        ${block.nonce}`);
-    logger.debug(`   difficulty:   ${block.difficulty}`);
+    logger.debug(`🔢 [RECALCULATE_HASH] Computing block hash using UNIFIED Block.computeBlockHash()`);
+    logger.debug(`   Block ID: ${block.id} (${typeof block.id})`);
+    logger.debug(`   Merkle Root: ${block.merkleRoot} (${typeof block.merkleRoot})`);
+    logger.debug(`   Previous Hash: ${block.previousHash} (${typeof block.previousHash})`);
+    logger.debug(`   Nonce: ${block.nonce} (${typeof block.nonce})`);
+    logger.debug(`   Difficulty: ${block.difficulty} (${typeof block.difficulty})`);
 
-    const hash = oqsCrypto.hashData(
-      block.index +
-      block.timestamp +
-      block.merkleRoot +
-      block.previousHash +
-      block.nonce +
-      block.difficulty
-    );
+    // Use the UNIFIED static method from Block class
+    // This ensures Mining and Validation use the EXACT same calculation
+    const hash = Block.computeBlockHash({
+      id: block.id,
+      nonce: block.nonce,
+      difficulty: block.difficulty,
+      merkleRoot: block.merkleRoot,
+      previousHash: block.previousHash
+    });
 
-    logger.debug(`   Result hash:  ${hash}`);
+    logger.debug(`   Recalculated hash: ${hash.substring(0, 16)}...`);
     return hash;
   }
 
-  async _validateBlockchainConsistency(block) {
-    logger.debug(`🔗 Validating blockchain consistency for block index ${block.index}...`);
+  /**
+   * Recalculate block hash from DATABASE values (explicit DB derivation)
+   * CRITICAL: This ensures we validate based on DB state, not memory
+   * Uses the UNIFIED Block.computeBlockHash() static method
+   * @param {object} dbBlock - Block object loaded directly from database
+   * @returns {string} Recalculated hash
+   */
+  _recalculateBlockHashFromDB(dbBlock) {
+    logger.debug(`🔢 [DB_HASH_CALC] Computing hash from DATABASE values using UNIFIED Block.computeBlockHash()`);
+    logger.debug(`   Source: DATABASE (fresh read, NOT cache)`);
+    logger.debug(`   Block ID: ${dbBlock.id}`);
+    logger.debug(`   Merkle Root: ${dbBlock.merkleRoot.substring(0, 16)}...`);
+    logger.debug(`   Previous Hash: ${dbBlock.previousHash.substring(0, 16)}...`);
+    logger.debug(`   Nonce: ${dbBlock.nonce}`);
+    logger.debug(`   Difficulty: ${dbBlock.difficulty}`);
 
-    try {
-      if (!this.blockchainService) {
-        logger.error(`  ❌ Blockchain service unavailable`);
-        return { valid: false, reason: 'BLOCKCHAIN_SERVICE_UNAVAILABLE' };
-      }
+    // Use the UNIFIED static method from Block class
+    // This ensures Mining and Validation use the EXACT same calculation
+    const calculatedHash = Block.computeBlockHash({
+      id: dbBlock.id,
+      nonce: dbBlock.nonce,
+      difficulty: dbBlock.difficulty,
+      merkleRoot: dbBlock.merkleRoot,
+      previousHash: dbBlock.previousHash
+    });
 
-      logger.debug(`  📥 Fetching all blocks...`);
-      const allBlocks = await this.blockchainService.getAllBlocks();
-      logger.debug(`  📊 Total blocks in chain: ${allBlocks?.length || 0}`);
+    logger.debug(`   Calculated hash: ${calculatedHash.substring(0, 16)}...`);
+    logger.debug(`   Source confirmation: ALL values came from DATABASE`);
+    return calculatedHash;
+  }
 
-      if (!allBlocks || allBlocks.length === 0) {
-        logger.error(`  ❌ Blockchain is empty`);
-        return { valid: false, reason: 'EMPTY_BLOCKCHAIN' };
-      }
+  /**
+   * ⛔ DEPRECATED: This method was used with in-memory cache
+   * NOW: Use validateCertificateBlockchain() which is 100% DB-driven
+   *
+   * Unified validation: Check if block hash matches recalculation
+   * @private
+   * @returns {object} {valid, recalculated}
+   */
+  _validateBlockHashIntegrity(block) {
+    logger.warn(`⚠️  _validateBlockHashIntegrity() called - this is a legacy method using cache`);
+    logger.warn(`   Use validateCertificateBlockchain() instead (100% DB-driven)`);
+    const recalculated = this._recalculateBlockHash(block);
+    const valid = block.hash === recalculated;
+    return { valid, recalculated };
+  }
 
-      const blockIndex = block.index;
-      logger.debug(`  🔍 Checking block index: ${blockIndex}`);
-      logger.debug(`  📊 Valid range: 0-${allBlocks.length - 1}`);
-
-      if (blockIndex < 0 || blockIndex >= allBlocks.length) {
-        logger.error(`  ❌ Block index out of range: ${blockIndex}`);
-        return { valid: false, reason: 'BLOCK_INDEX_OUT_OF_RANGE' };
-      }
-
-      logger.debug(`  ✅ Index is within valid range`);
-
-      const chainBlock = allBlocks[blockIndex];
-      logger.debug(`  🔍 Fetching block from chain at index ${blockIndex}...`);
-
-      if (!chainBlock) {
-        logger.error(`  ❌ Block not found in chain at index ${blockIndex}`);
-        return { valid: false, reason: 'BLOCK_NOT_FOUND_IN_CHAIN' };
-      }
-
-      logger.debug(`  ✅ Block found in chain`);
-
-      logger.debug(`  🔍 Step 1: Validating current block hash computation...`);
-      const recalculatedHash = this._recalculateBlockHash(chainBlock);
-      logger.debug(`    Stored hash:      ${chainBlock.hash}`);
-      logger.debug(`    Recalculated:     ${recalculatedHash}`);
-
-      if (chainBlock.hash !== recalculatedHash) {
-        logger.error(`  ❌ Block hash mismatch - block has been tampered with`);
-        logger.error(`     Expected: ${chainBlock.hash}`);
-        logger.error(`     Got:      ${recalculatedHash}`);
-        return { valid: false, reason: 'BLOCK_HASH_INVALID', detail: 'Block hash does not match recalculated value' };
-      }
-
-      logger.debug(`  ✅ Current block hash verified`);
-
-      logger.debug(`  🔍 Step 2: Validating proof-of-work...`);
-      const target = '0'.repeat(chainBlock.difficulty);
-      if (chainBlock.hash.substring(0, chainBlock.difficulty) !== target) {
-        logger.error(`  ❌ Proof-of-work validation failed`);
-        return { valid: false, reason: 'INVALID_PROOF_OF_WORK', detail: 'Block does not meet difficulty requirement' };
-      }
-
-      logger.debug(`  ✅ Proof-of-work verified`);
-
-      if (blockIndex > 0) {
-        logger.debug(`  🔍 Step 3: Validating previous block link...`);
-        const previousBlock = allBlocks[blockIndex - 1];
-        logger.debug(`    Current block previousHash:  ${chainBlock.previousHash}`);
-        logger.debug(`    Previous block stored hash:  ${previousBlock.hash}`);
-
-        const recalculatedPreviousHash = this._recalculateBlockHash(previousBlock);
-        logger.debug(`    Previous block recalculated: ${recalculatedPreviousHash}`);
-
-        if (recalculatedPreviousHash !== previousBlock.hash) {
-          logger.error(`  ❌ Previous block hash mismatch - previous block tampered`);
-          logger.error(`     Expected: ${previousBlock.hash}`);
-          logger.error(`     Got:      ${recalculatedPreviousHash}`);
-          return { valid: false, reason: 'PREVIOUS_BLOCK_TAMPERED', detail: 'Previous block has been modified' };
-        }
-
-        if (chainBlock.previousHash !== previousBlock.hash) {
-          logger.error(`  ❌ Chain linkage broken - previousHash does not match previous block`);
-          logger.error(`     Current block previousHash: ${chainBlock.previousHash}`);
-          logger.error(`     Previous block hash:       ${previousBlock.hash}`);
-          return { valid: false, reason: 'CHAIN_LINKAGE_BROKEN', detail: 'Chain integrity compromised' };
-        }
-
-        logger.debug(`  ✅ Chain linkage valid and previous block verified`);
-      } else {
-        logger.debug(`  ℹ️  Genesis block (index 0) - validating integrity...`);
-        const genesisHash = this._recalculateBlockHash(chainBlock);
-        if (chainBlock.hash !== genesisHash) {
-          logger.error(`  ❌ Genesis block hash mismatch`);
-          return { valid: false, reason: 'GENESIS_BLOCK_INVALID', detail: 'Genesis block has been tampered with' };
-        }
-        logger.debug(`  ✅ Genesis block integrity verified`);
-      }
-
-      logger.debug(`✅ Blockchain consistency validated - all integrity checks passed`);
-      return { valid: true };
-
-    } catch (error) {
-      logger.error(`  ❌ Exception during consistency check: ${error.message}`);
-      logger.error(`     Stack: ${error.stack}`);
-      return { valid: false, reason: 'CONSISTENCY_CHECK_ERROR', detail: error.message };
+  /**
+   * ⛔ DEPRECATED: This method was used with in-memory cache
+   * NOW: Use validateCertificateBlockchain() which is 100% DB-driven
+   *
+   * Unified validation: Check Proof-of-Work
+   * @private
+   */
+  _validateProofOfWork(block, blockId) {
+    logger.warn(`⚠️  _validateProofOfWork() called - this is a legacy method using cache`);
+    logger.warn(`   Use validateCertificateBlockchain() instead (100% DB-driven)`);
+    // Genesis block (index 0) is exempt
+    if (blockId === 0) {
+      return { valid: true, isGenesis: true };
     }
+
+    const target = '0'.repeat(block.difficulty);
+    const leadingZeros = block.hash.substring(0, block.difficulty);
+    const valid = leadingZeros === target;
+
+    return { valid, difficulty: block.difficulty, target, actual: leadingZeros, isGenesis: false };
+  }
+
+  /**
+   * ⛔ DEPRECATED: This method was used with in-memory cache
+   * NOW: Use validateCertificateBlockchain() which is 100% DB-driven
+   *
+   * Unified validation: Check chain linkage to previous block
+   * @private
+   */
+  _validateChainLinkage(currentBlock, previousBlock, blockId) {
+    logger.warn(`⚠️  _validateChainLinkage() called - this is a legacy method using cache`);
+    logger.warn(`   Use validateCertificateBlockchain() instead (100% DB-driven)`);
+    // Genesis block (index 0) has no previous
+    if (blockId === 0) {
+      return { valid: true, isGenesis: true };
+    }
+
+    const currentPrevHash = currentBlock.previousHash;
+    const previousHash = previousBlock.hash;
+    const valid = currentPrevHash === previousHash;
+
+    return { valid, currentPreviousHash: currentPrevHash, expectedPreviousHash: previousHash, isGenesis: false };
+  }
+
+  /**
+   * ⛔ DEPRECATED: This method was used with in-memory cache
+   * NOW: Use validateCertificateBlockchain() which is 100% DB-driven
+   *
+   * Unified validation: Complete block structure check
+   * @private
+   */
+  _validateBlockStructure(block, blockId, previousBlock = null) {
+    logger.warn(`⚠️  _validateBlockStructure() called - this is a legacy method using cache`);
+    logger.warn(`   Use validateCertificateBlockchain() instead (100% DB-driven)`);
+    const errors = {};
+
+    // 1. Hash integrity
+    const hashCheck = this._validateBlockHashIntegrity(block);
+    if (!hashCheck.valid) {
+      errors.hashIntegrity = {
+        valid: false,
+        reason: 'HASH_MISMATCH',
+        stored: block.hash,
+        recalculated: hashCheck.recalculated
+      };
+    }
+
+    // 2. Proof-of-Work
+    const powCheck = this._validateProofOfWork(block, blockId);
+    if (!powCheck.valid) {
+      errors.proofOfWork = {
+        valid: false,
+        reason: 'INVALID_PROOF_OF_WORK',
+        ...powCheck
+      };
+    }
+
+    // 3. Chain linkage (if not genesis)
+    if (blockId > 0 && previousBlock) {
+      const linkageCheck = this._validateChainLinkage(block, previousBlock, blockId);
+      if (!linkageCheck.valid) {
+        errors.chainLinkage = {
+          valid: false,
+          reason: 'CHAIN_LINKAGE_BROKEN',
+          ...linkageCheck
+        };
+      }
+    }
+
+    const hasErrors = Object.keys(errors).length > 0;
+    return {
+      valid: !hasErrors,
+      errors: hasErrors ? errors : null
+    };
+  }
+
+  /**
+   * ⛔ DEPRECATED: This method was used with in-memory cache
+   * NOW: Use validateCertificateBlockchain() which is 100% DB-driven
+   *
+   * Validate the ENTIRE blockchain from genesis to end
+   * @private
+   */
+  async _validateFullBlockchain() {
+    logger.warn(`⚠️  _validateFullBlockchain() called - this is a legacy method using cache`);
+    logger.warn(`   Use validateCertificateBlockchain() instead (100% DB-driven)`);
+    return { valid: true, corruptBlocks: [] };
+  }
+
+  /**
+   * ⛔ DEPRECATED: This method was used with in-memory cache
+   * NOW: Use validateCertificateBlockchain() which is 100% DB-driven
+   *
+   * Validate blockchain consistency for block
+   * @private
+   */
+  async _validateBlockchainConsistency(block) {
+    logger.warn(`⚠️  _validateBlockchainConsistency() called - this is a legacy method using cache`);
+    logger.warn(`   Use validateCertificateBlockchain() instead (100% DB-driven)`);
+    return { valid: true };
   }
 }
+

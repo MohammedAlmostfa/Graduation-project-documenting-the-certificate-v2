@@ -193,8 +193,91 @@ export class OQSCrypto {
   }
 
 
+  /**
+   * Validate hash format and integrity
+   * Ensures hash is valid hexadecimal and correct length for SHA3-512
+   * @param {string} hash - Hash to validate
+   * @param {number} expectedLength - Expected hash length in hex characters (128 for SHA3-512)
+   * @returns {object} { valid: boolean, error: string|null }
+   */
+  validateHashFormat(hash, expectedLength = 128) {
+    if (!hash || typeof hash !== 'string') {
+      return { valid: false, error: 'Hash must be a non-empty string' };
+    }
+
+    // Remove whitespace
+    const trimmedHash = hash.trim();
+    
+    // Check if hash contains only valid hex characters
+    if (!/^[0-9a-f]*$/.test(trimmedHash)) {
+      return { 
+        valid: false, 
+        error: `Hash contains invalid characters. Found non-hex: ${trimmedHash.replace(/[0-9a-f]/g, '')}` 
+      };
+    }
+
+    // Check length (SHA3-512 = 128 hex characters / 64 bytes)
+    if (trimmedHash.length !== expectedLength) {
+      return { 
+        valid: false, 
+        error: `Hash length invalid. Expected ${expectedLength}, got ${trimmedHash.length}` 
+      };
+    }
+
+    return { valid: true, error: null };
+  }
+
+  /**
+   * Validate block hash fields
+   * Validates all hash fields in a block for corruption
+   * @param {object} block - Block object with hash fields
+   * @returns {object} { valid: boolean, errors: array }
+   */
+  validateBlockHashes(block) {
+    const errors = [];
+
+    // Validate block hash
+    if (block.hash) {
+      const hashValidation = this.validateHashFormat(block.hash, 128);
+      if (!hashValidation.valid) {
+        errors.push(`Block hash: ${hashValidation.error}`);
+      }
+    }
+
+    // Validate merkle root (can be empty for genesis, otherwise must be valid hex)
+    if (block.merkleRoot && typeof block.merkleRoot === 'string') {
+      if (block.id === 0 && block.merkleRoot === '') {
+        // Genesis block with empty merkleRoot is acceptable
+      } else if (block.merkleRoot.length > 0) {
+        const merkleValidation = this.validateHashFormat(block.merkleRoot, 128);
+        if (!merkleValidation.valid) {
+          errors.push(`Merkle root: ${merkleValidation.error}`);
+        }
+      }
+    }
+
+    // Validate previous hash
+    if (block.previousHash) {
+      // Genesis block has previousHash = "0", all others should be valid hex
+      if (block.id === 0 && block.previousHash === '0') {
+        // Genesis previous hash is "0" - acceptable
+      } else if (block.previousHash !== '0') {
+        const prevValidation = this.validateHashFormat(block.previousHash, 128);
+        if (!prevValidation.valid) {
+          errors.push(`Previous hash: ${prevValidation.error}`);
+        }
+      }
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  }
+
 }
 
 // Export singleton instance
 export const oqsCrypto = new OQSCrypto();
 export default oqsCrypto;
+

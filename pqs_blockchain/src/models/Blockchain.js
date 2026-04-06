@@ -40,7 +40,7 @@ export class Blockchain {
      */
     createGenesisBlock() {
         const genesisBlock = new Block(
-            blockchainConfig.genesisBlock.index,
+            0,  // Genesis block has id = 0
             blockchainConfig.genesisBlock.timestamp,
             // Genesis block has no certificates
             blockchainConfig.genesisBlock.certificateIds || [],
@@ -94,18 +94,32 @@ export class Blockchain {
 
     /**
      * Mine pending certificates into a new block
+     * @param {string} merkleRoot - Merkle root of certificates
+     * @param {number} nextBlockId - OPTIONAL: Explicit block id to use (from DB, for race condition prevention)
      */
-    minePendingCertificates(merkleRoot = null) {
+    minePendingCertificates(merkleRoot = null, nextBlockId = null) {
 
         if (this.pendingCertificates.length === 0) {
             logger.info('No certificates in the pending queue for mining');
             return null;
         }
 
-        logger.info(`⛏️ Mining ${this.pendingCertificates.length} certificates...`);
+        // Use provided id or calculate from chain length
+        // In race conditions, nextBlockId is provided from DB to get sequence correct
+        const blockId = nextBlockId !== null ? nextBlockId : this.chain.length;
+
+        if (nextBlockId !== null && nextBlockId !== this.chain.length) {
+            logger.debug(
+                `⚠️  Block id override: DB suggested ${nextBlockId}, ` +
+                `but memory chain has length ${this.chain.length}. ` +
+                `Using DB id ${nextBlockId} to handle potential race conditions.`
+            );
+        }
+
+        logger.info(`⛏️ Mining ${this.pendingCertificates.length} certificates (block id: ${blockId})...`);
 
         const block = new Block(
-            this.chain.length,
+            blockId,
             new Date().toISOString(),
             this.pendingCertificates.map(cert => cert.id),
             merkleRoot || '',
@@ -127,7 +141,7 @@ export class Blockchain {
         // Add block to chain
         this.chain.push(block);
 
-        const blockNumber = this.chain.length - 1;
+        const blockNumber = blockId;
         const minedCertificates = [...this.pendingCertificates];
 
         // Clear pending queue
@@ -148,7 +162,24 @@ export class Blockchain {
      */
     isChainValid() {
 
-        // Skip genesis block
+        // Verify genesis block exists and has valid structure
+        if (this.chain.length === 0) {
+            logger.error('❌ Blockchain is empty - genesis block missing');
+            return false;
+        }
+
+        const genesisBlock = this.chain[0];
+        if (genesisBlock.id !== 0) {
+            logger.error('❌ Genesis block has invalid id');
+            return false;
+        }
+
+        if (!genesisBlock.validate()) {
+            logger.error('❌ Genesis block failed validation');
+            return false;
+        }
+
+        // Validate all non-genesis blocks
         for (let i = 1; i < this.chain.length; i++) {
 
             const currentBlock = this.chain[i];
@@ -156,19 +187,19 @@ export class Blockchain {
 
             // Check block hash
             if (currentBlock.hash !== currentBlock.calculateHash()) {
-                logger.error(`❌ Block ${currentBlock.index} is invalid - Hash mismatch`);
+                logger.error(`❌ Block ${currentBlock.id} is invalid - Hash mismatch`);
                 return false;
             }
 
             // Check chain linkage
             if (currentBlock.previousHash !== previousBlock.hash) {
-                logger.error(`❌ Block ${currentBlock.index} is not linked correctly`);
+                logger.error(`❌ Block ${currentBlock.id} is not linked correctly`);
                 return false;
             }
 
             // Check proof-of-work
             if (!currentBlock.validate()) {
-                logger.error(`❌ Block ${currentBlock.index} failed validation`);
+                logger.error(`❌ Block ${currentBlock.id} failed validation`);
                 return false;
             }
         }
@@ -219,7 +250,7 @@ export class Blockchain {
             totalCertificates,
             pendingCertificates: this.pendingCertificates.length,
             difficulty: this.difficulty,
-            latestBlock: this.getLatestBlock().index,
+            latestBlock: this.getLatestBlock().id,
             chainValid: this.isChainValid()
         };
     }
@@ -237,3 +268,4 @@ export class Blockchain {
         };
     }
 }
+

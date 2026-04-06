@@ -23,3 +23,4 @@ export class CreateUserRequest {
         return this.data;
     }
 }
+

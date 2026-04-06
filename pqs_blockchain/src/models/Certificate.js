@@ -79,7 +79,7 @@ export class Certificate {
 
         // Blockchain references
         this.blockId = data.blockId || null;
-        this.blockIndex = data.blockIndex || data.blockNumber || null;
+        this.blockIndex = data.blockIndex || data.blockNumber || null;  // kept for compatibility
 
         this.createdAt = data.createdAt || new Date().toISOString();
         this.updatedAt = data.updatedAt || new Date().toISOString();
@@ -314,3 +314,4 @@ export class Certificate {
             };
         }
 }
+

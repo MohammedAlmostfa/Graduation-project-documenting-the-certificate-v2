@@ -21,3 +21,4 @@ export class StatusRequest {
         return trimmed;
     }
 }
+

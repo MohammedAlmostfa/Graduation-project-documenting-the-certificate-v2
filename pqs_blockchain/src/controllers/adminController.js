@@ -13,6 +13,7 @@ import {
 } from '../utils/apiResponse.js';
 import { asyncWrapper } from '../utils/asyncWrapper.js';
 import { RestoreBackupRequest } from '../requests/RestoreBackupRequest.js';
+import { telegramService } from '../services/telegram.service.js';
 /**
  * Admin Controller
  *
@@ -130,15 +131,48 @@ export const adminController = {
      * Admin permission required.
      */
     backupData: asyncWrapper(async (req, res) => {
-            const result = await backupService.createBackupFile();
+            logger.info('📦 Backup operation started');
 
-            logger.info(`✅ Backup file created: ${result.filename}`);
-            res.json(ApiResponse.success('تم إنشاء النسخة الاحتياطية بنجاح (Backup created successfully)', {
-                filename: result.filename,
-                timestamp: result.timestamp,
-                dataCount: result.dataCount,
-                message: `Backup saved to: ${result.filepath}`
-            }));
+            // Send start notification
+            await telegramService.info(
+                `*📦 النسخة الاحتياطية - نسخة جديدة*\n\n` +
+                `*Status:* جاري الانتظار...\n` +
+                `*التاريخ:* _${new Date().toISOString()}_`
+            );
+
+            try {
+                const result = await backupService.createBackupFile();
+
+                logger.info(`✅ Backup file created: ${result.filename}`);
+
+                // Send success notification with details
+                await telegramService.success(
+                    `*📦 النسخة الاحتياطية تم إنشاؤها بنجاح*\n\n` +
+                    `*الملف:* \`${result.filename}\`\n` +
+                    `*الشهادات:* ${result.dataCount.certificates}\n` +
+                    `*المستخدمون:* ${result.dataCount.users}\n` +
+                    `*البلوكس:* ${result.dataCount.blocks}\n` +
+                    `*التاريخ:* _${result.timestamp}_`
+                );
+
+                res.json(ApiResponse.success('تم إنشاء النسخة الاحتياطية بنجاح (Backup created successfully)', {
+                    filename: result.filename,
+                    timestamp: result.timestamp,
+                    dataCount: result.dataCount,
+                    message: `Backup saved to: ${result.filepath}`
+                }));
+            } catch (error) {
+                logger.error(`❌ Backup creation failed: ${error.message}`);
+
+                // Send error notification
+                await telegramService.error(
+                    `*فشل إنشاء النسخة الاحتياطية*\n\n` +
+                    `*الخطأ:* ${error.message}`,
+                    error
+                );
+
+                throw error;
+            }
     }),
 
     /**
@@ -174,11 +208,44 @@ export const adminController = {
 
             logger.info(`🔄 Starting restore from backup: ${filename}`);
 
-            // Perform restore with database transaction
-            const result = await backupService.restoreFromBackup(filename);
+            // Send start notification
+            await telegramService.warning(
+                `*🔄 استعادة النظام - جاري الانتظار*\n\n` +
+                `*الملف:* \`${filename}\`\n` +
+                `*التاريخ:* _${new Date().toISOString()}_\n\n` +
+                `⚠️ _تحذير: قد يستغرق الأمر عدة ثوان_`
+            );
 
-            logger.info(`✅ Restore completed successfully`);
-            res.json(ApiResponse.success('تم استعادة النظام بنجاح (System restored successfully)', result.restoreDetails));
+            try {
+                // Perform restore with database transaction
+                const result = await backupService.restoreFromBackup(filename);
+
+                logger.info(`✅ Restore completed successfully`);
+
+                // Send success notification
+                await telegramService.success(
+                    `*✅ تم استعادة النظام بنجاح*\n\n` +
+                    `*الملف:* \`${filename}\`\n` +
+                    `*الشهادات المستعادة:* ${result.restoreDetails.dataRestored.certificates}\n` +
+                    `*المستخدمون المستعادون:* ${result.restoreDetails.dataRestored.users}\n` +
+                    `*البلوكس المستعادة:* ${result.restoreDetails.dataRestored.blocks}\n` +
+                    `*التاريخ:* _${new Date().toISOString()}_`
+                );
+
+                res.json(ApiResponse.success('تم استعادة النظام بنجاح (System restored successfully)', result.restoreDetails));
+            } catch (error) {
+                logger.error(`❌ Restore from backup failed: ${error.message}`);
+
+                // Send error notification
+                await telegramService.error(
+                    `*❌ فشل استعادة النظام*\n\n` +
+                    `*الملف:* \`${filename}\`\n` +
+                    `*الخطأ:* ${error.message}`,
+                    error
+                );
+
+                throw error;
+            }
     }),
 
     /**
@@ -189,9 +256,32 @@ export const adminController = {
             const request = new RestoreBackupRequest(req.body.backupFilename);
             const filename = request.validate();
 
-            const result = await backupService.deleteBackup(filename);
+            logger.info(`🗑️ Deleting backup: ${filename}`);
 
-            logger.info(`🗑️ Backup deleted: ${filename}`);
-            res.json(ApiResponse.success('تم حذف النسخة الاحتياطية بنجاح (Backup deleted successfully)', result));
+            try {
+                const result = await backupService.deleteBackup(filename);
+
+                logger.info(`🗑️ Backup deleted: ${filename}`);
+
+                // Send info notification
+                await telegramService.info(
+                    `*🗑️ تم حذف نسخة احتياطية*\n\n` +
+                    `*الملف:* \`${filename}\``
+                );
+
+                res.json(ApiResponse.success('تم حذف النسخة الاحتياطية بنجاح (Backup deleted successfully)', result));
+            } catch (error) {
+                logger.error(`❌ Failed to delete backup: ${error.message}`);
+
+                // Send error notification
+                await telegramService.error(
+                    `*فشل حذف النسخة الاحتياطية*\n\n` +
+                    `*الملف:* \`${filename}\``,
+                    error
+                );
+
+                throw error;
+            }
     })
 };
+

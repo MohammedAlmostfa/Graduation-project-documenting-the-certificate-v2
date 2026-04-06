@@ -93,3 +93,4 @@ export const certificateRepository = new CertificateRepository();
 
 // Export the class for testing or advanced use
 export { CertificateRepository };
+

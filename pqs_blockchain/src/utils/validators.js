@@ -125,3 +125,4 @@ export function dateOrNow(val) {
   const date = new Date(val);
   return !isNaN(date.getTime()) ? date : new Date();
 }
+

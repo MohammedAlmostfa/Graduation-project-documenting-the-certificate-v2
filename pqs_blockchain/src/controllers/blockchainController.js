@@ -83,3 +83,4 @@ export const blockchainController = {
             res.json(ApiResponse.success('تم جلب الشهادات المعلقة بنجاح', { pendingCount: stats.pendingCertificates, stats }));
     })
 };
+

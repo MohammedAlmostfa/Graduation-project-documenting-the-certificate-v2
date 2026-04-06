@@ -63,3 +63,4 @@ class UserRepository extends BaseRepository {
 
 // Export a single repository instance
 export const userRepository = new UserRepository();
+

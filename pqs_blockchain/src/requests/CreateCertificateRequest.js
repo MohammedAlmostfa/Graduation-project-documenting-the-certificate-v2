@@ -23,3 +23,4 @@ export class CreateCertificateRequest {
         return this.data;
     }
 }
+

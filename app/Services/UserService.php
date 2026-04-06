@@ -24,7 +24,7 @@ class UserService extends Service
 
     public function createUser(array $data): array
     {
-        $departmentName = Department::findOrFail($data['department_id'])->name;
+
 
         $response = $this->api->makeRequest('POST', '/admin/users', [
             'username'   => $data['name'],

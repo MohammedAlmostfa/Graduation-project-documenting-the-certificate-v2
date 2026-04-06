@@ -15,8 +15,8 @@ const CERT_SELECT_BASE = `
 		s.mother_name AS mother_name,
 		s.major     AS major,
 		s.faculty   AS faculty,
-		b.block_index AS block_number,
-		b.id          AS block_id
+		b.id AS block_number,
+		b.id AS block_id
 	FROM certificates c
 	JOIN students s ON c.student_id = s.id
 	LEFT JOIN blockchain b ON c.block_id = b.id
@@ -249,3 +249,4 @@ export class CertificateQueries {
 		return this._attachSignatures(conn, certs);
 	}
 }
+

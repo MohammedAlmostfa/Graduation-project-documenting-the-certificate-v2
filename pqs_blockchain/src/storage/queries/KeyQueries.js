@@ -19,3 +19,4 @@ export class KeyQueries {
 		return deserializeJSON(rows[0].key_data);
 	}
 }
+

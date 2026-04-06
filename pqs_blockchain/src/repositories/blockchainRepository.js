@@ -45,9 +45,9 @@ class BlockchainRepository extends BaseRepository {
      * 5. Update certificates with block info
      * 6. Commit transaction
      */
-    async minePendingCertificatesAtomic(block, certificates, merkleRoot, certificateRepo, blockIndex) {
+    async minePendingCertificatesAtomic(block, certificates, merkleRoot, certificateRepo, blockId) {
         return this.exec('minePendingCertificatesAtomic', this.db.minePendingCertificatesAtomic,
-            block, certificates, merkleRoot, certificateRepo, blockIndex);
+            block, certificates, merkleRoot, certificateRepo, blockId);
     }
 
     /**
@@ -70,7 +70,26 @@ class BlockchainRepository extends BaseRepository {
     async getAllBlocks() {
         return this.exec('getAllBlocks', this.db.getAllBlocks);
     }
+
+    /**
+     * Get the last block id safely to prevent race conditions
+     * Used to determine the next block id for mining
+     */
+    async getLastBlockIndex() {
+        try {
+            const chain = await this.getChain();
+            if (!chain || !chain.chain || chain.chain.length === 0) {
+                return -1; // No blocks yet, genesis block will be 0
+            }
+            const lastBlock = chain.chain[chain.chain.length - 1];
+            return lastBlock.id ?? -1;
+        } catch (error) {
+            logger.error(`❌ Error getting last block id: ${error.message}`);
+            throw error;
+        }
+    }
 }
 
 // Export a single repository instance
 export const blockchainRepository = new BlockchainRepository();
+

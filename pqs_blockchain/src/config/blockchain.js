@@ -15,3 +15,4 @@ export const blockchainConfig = {
     hash: process.env.BLOCKCHAIN_GENESIS_HASH || '0'.repeat(64)
   }
 };
+

@@ -26,3 +26,4 @@ export function errorHandler(error, req, res, _next) {
   logger.error('Server error', error instanceof Error ? { message: error.message, stack: error.stack } : error);
   res.status(500).json(ApiResponse.error('خطأ في الخادم الداخلي', 'INTERNAL_ERROR', error instanceof Error ? error.message : String(error)));
 }
+

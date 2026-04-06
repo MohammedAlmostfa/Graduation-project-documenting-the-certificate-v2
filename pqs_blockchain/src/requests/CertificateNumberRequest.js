@@ -21,3 +21,4 @@ export class CertificateNumberRequest {
         return this.certificateNumber;
     }
 }
+

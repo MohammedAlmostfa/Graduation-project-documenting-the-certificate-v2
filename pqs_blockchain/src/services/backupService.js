@@ -5,6 +5,7 @@ import { logger } from '../utils/logger.js';
 import { ValidationError, NotFoundError } from '../utils/errors.js';
 import { CertificateQueries } from '../storage/queries/CertificateQueries.js';
 import { ChainQueries } from '../storage/queries/ChainQueries.js';
+import { oqsCrypto } from '../utils/crypto-oqs.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -244,6 +245,22 @@ export class BackupService {
             throw new ValidationError('Backup blockchain structure invalid');
         }
 
+        // Validate blockchain blocks for hash corruption
+        const corruptedBlocks = [];
+        data.blockchain.blocks.forEach(block => {
+            const validation = oqsCrypto.validateBlockHashes(block);
+            if (!validation.valid) {
+                corruptedBlocks.push({
+                    index: block.id,
+                    errors: validation.errors
+                });
+            }
+        });
+
+        if (corruptedBlocks.length > 0) {
+            logger.warn(`⚠️  Backup validation found ${corruptedBlocks.length} blocks with corrupted hashes (will be reported)`);
+        }
+
         logger.debug(`✅ Backup data validation passed`);
     }
 
@@ -314,6 +331,27 @@ export class BackupService {
                 // 3. Restore blockchain FIRST (certificates have foreign key to blockchain)
                 logger.info(`⛓️ Restoring blockchain...`);
                 if (backupData.data.blockchain && backupData.data.blockchain.blocks.length > 0) {
+                    // Validate blockchain blocks for corruption BEFORE restoring
+                    const corruptedBlocks = [];
+                    backupData.data.blockchain.blocks.forEach(block => {
+                        const validation = oqsCrypto.validateBlockHashes(block);
+                        if (!validation.valid) {
+                            corruptedBlocks.push({
+                                index: block.id,
+                                errors: validation.errors
+                            });
+                        }
+                    });
+
+                    if (corruptedBlocks.length > 0) {
+                        logger.warn(`⚠️  Backup contains ${corruptedBlocks.length} blocks with corrupted hashes:`);
+                        corruptedBlocks.forEach(block => {
+                            logger.warn(`   Block ${block.id}:`);
+                            block.errors.forEach(err => logger.warn(`      - ${err}`));
+                        });
+                        logger.warn(`⚠️  These corrupted blocks WILL be restored as-is. Manual inspection recommended.`);
+                    }
+
                     await ChainQueries.saveChain(connection, { chain: backupData.data.blockchain.blocks });
                 }
                 logger.info(`✅ Blockchain restored: ${backupData.data.blockchain.blocks.length}`);
@@ -384,3 +422,4 @@ export class BackupService {
         }
     }
 }
+

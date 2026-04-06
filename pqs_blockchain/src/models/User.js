@@ -71,3 +71,4 @@ export class User {
     admin: 4
   };
 }
+
