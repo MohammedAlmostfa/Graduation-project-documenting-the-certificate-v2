@@ -3,8 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
-use App\Models\Department;
-use Illuminate\Support\Facades\Log;
+
 
 
 class UserService extends Service

@@ -6,9 +6,9 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\UserService;
 use Illuminate\Support\Facades\Log;
-use App\Http\Resources\UserResource;
+
 use App\Http\Requests\UserFormRequest\StoreUserRequest;
-use App\Http\Requests\UserFormRequest\UpdateUserRequest;
+
 
 /**
  * Controller for managing user-related operations.
@@ -61,7 +61,9 @@ class UserController extends Controller
      */
     public function store(StoreUserRequest $request)
     {
+        Log::info('Received request to create user', ['request' => $request->all()]);
         $validatedData = $request->validated();
+
         $result = $this->userService->createUser($validatedData);
 
         return $result['status'] === 201
@@ -82,8 +84,6 @@ class UserController extends Controller
     {
         $result = $this->userService->getUser($id);
 
-        // Log the raw API response for debugging
-        Log::debug('API response', $result);
 
         return $result['status'] === 200
             ? self::success($result['data'], $result['message'], $result['status'])
