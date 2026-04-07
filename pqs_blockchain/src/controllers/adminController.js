@@ -133,27 +133,27 @@ export const adminController = {
     backupData: asyncWrapper(async (req, res) => {
             logger.info('Backup operation started');
 
-            // Send start notification
-            await telegramService.info(
+            // Send start notification (fire-and-forget - don't wait)
+            telegramService.info(
                 `*النسخة الاحتياطية - نسخة جديدة*\n\n` +
                 `*Status:* جاري الانتظار...\n` +
                 `*التاريخ:* _${new Date().toISOString()}_`
-            );
+            ).catch(err => logger.error('Telegram info message failed', err));
 
             try {
                 const result = await backupService.createBackupFile();
 
                 logger.info(`Backup file created: ${result.filename}`);
 
-                // Send success notification with details
-                await telegramService.success(
+                // Send success notification (fire-and-forget - don't wait)
+                telegramService.success(
                     `*النسخة الاحتياطية تم إنشاؤها بنجاح*\n\n` +
                     `*الملف:* \`${result.filename}\`\n` +
                     `*الشهادات:* ${result.dataCount.certificates}\n` +
                     `*المستخدمون:* ${result.dataCount.users}\n` +
                     `*البلوكس:* ${result.dataCount.blocks}\n` +
                     `*التاريخ:* _${result.timestamp}_`
-                );
+                ).catch(err => logger.error('Telegram success message failed', err));
 
                 res.json(ApiResponse.success('تم إنشاء النسخة الاحتياطية بنجاح', {
                     filename: result.filename,
@@ -164,12 +164,12 @@ export const adminController = {
             } catch (error) {
                 logger.error(`Backup creation failed: ${error.message}`);
 
-                // Send error notification
-                await telegramService.error(
+                // Send error notification (fire-and-forget - don't wait)
+                telegramService.error(
                     `*فشل إنشاء النسخة الاحتياطية*\n\n` +
                     `*الخطأ:* ${error.message}`,
                     error
-                );
+                ).catch(err => logger.error('Telegram error message failed', err));
 
                 throw error;
             }
@@ -208,13 +208,13 @@ export const adminController = {
 
             logger.info(`Starting restore from backup: ${filename}`);
 
-            // Send start notification
-            await telegramService.warning(
+            // Send start notification (fire-and-forget - don't wait)
+            telegramService.warning(
                 `*استعادة النظام - جاري الانتظار*\n\n` +
                 `*الملف:* \`${filename}\`\n` +
                 `*التاريخ:* _${new Date().toISOString()}_\n\n` +
                 `تحذير: قد يستغرق الأمر عدة ثوان`
-            );
+            ).catch(err => logger.error('Telegram warning message failed', err));
 
             try {
                 // Perform restore with database transaction
@@ -222,27 +222,27 @@ export const adminController = {
 
                 logger.info(`Restore completed successfully`);
 
-                // Send success notification
-                await telegramService.success(
+                // Send success notification (fire-and-forget - don't wait)
+                telegramService.success(
                     `*تم استعادة النظام بنجاح*\n\n` +
                     `*الملف:* \`${filename}\`\n` +
                     `*الشهادات المستعادة:* ${result.restoreDetails.dataRestored.certificates}\n` +
                     `*المستخدمون المستعادون:* ${result.restoreDetails.dataRestored.users}\n` +
                     `*البلوكس المستعادة:* ${result.restoreDetails.dataRestored.blocks}\n` +
                     `*التاريخ:* _${new Date().toISOString()}_`
-                );
+                ).catch(err => logger.error('Telegram success message failed', err));
 
                 res.json(ApiResponse.success('تم استعادة النظام بنجاح', result.restoreDetails));
             } catch (error) {
                 logger.error(`❌ Restore from backup failed: ${error.message}`);
 
-                // Send error notification
-                await telegramService.error(
+                // Send error notification (fire-and-forget - don't wait)
+                telegramService.error(
                     `*فشل استعادة النظام*\n\n` +
                     `*الملف:* \`${filename}\`\n` +
                     `*الخطأ:* ${error.message}`,
                     error
-                );
+                ).catch(err => logger.error('Telegram error message failed', err));
 
                 throw error;
             }
@@ -263,22 +263,22 @@ export const adminController = {
 
                 logger.info(`Backup deleted: ${filename}`);
 
-                // Send info notification
-                await telegramService.info(
+                // Send info notification (fire-and-forget - don't wait)
+                telegramService.info(
                     `*تم حذف نسخة احتياطية*\n\n` +
                     `*الملف:* \`${filename}\``
-                );
+                ).catch(err => logger.error('Telegram info message failed', err));
 
                 res.json(ApiResponse.success('تم حذف النسخة الاحتياطية بنجاح', result));
             } catch (error) {
                 logger.error(`Failed to delete backup: ${error.message}`);
 
-                // Send error notification
-                await telegramService.error(
+                // Send error notification (fire-and-forget - don't wait)
+                telegramService.error(
                     `*فشل حذف النسخة الاحتياطية*\n\n` +
                     `*الملف:* \`${filename}\``,
                     error
-                );
+                ).catch(err => logger.error('Telegram error message failed', err));
 
                 throw error;
             }

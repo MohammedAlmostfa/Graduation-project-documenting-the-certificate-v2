@@ -106,7 +106,7 @@ router.get('/stats',
 
 /**
  * List all available backup files
- * GET /admin/backup/list
+ * GET /admin/backup
  *
  * Requires: Admin role
  * Returns: Array of all backup files with timestamps
@@ -130,20 +130,18 @@ router.get('/backup',
  * - Rolls back all changes if any error occurs (all-or-nothing restore)
  */
 router.post('/backup/restore',
-
     adminController.restoreBackup
 );
 
 /**
  * Delete a backup file
- * POST /admin/backup/delete
+ * DELETE /admin/backup
  *
  * Requires: Admin role
  * Request body: { backupFilename: "backup-YYYY-MM-DD-HH-mm-ss.json" }
  * Returns: Deletion result
  */
 router.delete('/backup',
-
     adminController.deleteBackup
 );
 
@@ -158,7 +156,6 @@ router.delete('/backup',
  * GET is used here for testing purposes
  */
 router.get('/backup',
-
     adminController.backupData
 );
 
@@ -171,7 +168,6 @@ router.get('/backup',
  * Recommended: Use POST for production environments
  */
 router.post('/backup',
-
     adminController.backupData);
 
 

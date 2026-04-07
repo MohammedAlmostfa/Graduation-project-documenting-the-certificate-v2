@@ -65,10 +65,18 @@ class TelegramService {
         throw new Error('Message must be a non-empty string');
       }
 
-      await this.bot.sendMessage(this.chatId, message, {
-        parse_mode: 'Markdown',
-        disable_web_page_preview: true
-      });
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Telegram send timeout after 5000ms')), 5000)
+      );
+
+      await Promise.race([
+        this.bot.sendMessage(this.chatId, message, {
+          parse_mode: 'Markdown',
+          disable_web_page_preview: true
+        }),
+        timeoutPromise
+      ]);
 
       logger.debug(`📤 Telegram message sent: ${message.substring(0, 50)}...`);
     } catch (error) {

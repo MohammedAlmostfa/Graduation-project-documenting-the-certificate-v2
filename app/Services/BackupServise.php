@@ -41,7 +41,7 @@ class BackupServise extends Service
     public function StoreBackups()
     {
         // Send POST request to create a backup
-        $response = $this->api->makeRequest('get', '/admin/backup');
+        $response = $this->api->makeRequest('post', '/admin/backup');
 
         // Format and return response
         return $this->formatResponse($response, $response['data'] ?? null);
@@ -75,12 +75,12 @@ class BackupServise extends Service
      * @return array Formatted API response
      */
 
-    public function DeletBackups($buckupNmae)
+    public function DeletBackups($backupName)
     {
         // Send request to delete backups
         $response = $this->api->makeRequest('delete', '/admin/backup', [
-            'backupFilename' => $buckupNmae
-        ]       );
+            'backupFilename' => $backupName
+        ]);
 
         // Format and return response
         return $this->formatResponse($response, $response['data']['message'] ?? null);

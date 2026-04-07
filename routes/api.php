@@ -28,7 +28,7 @@ Route::post('/logout', [AuthController::class, 'logout']);
 
 Route::post('certificates/{certificate_id}}/validate', [CertificateController::class, 'verifyCertificate']);
 
-Route::middleware(['auth:api'])->group(function () {
+// Route::middleware(['auth:api'])->group(function () {
 
     Route::get('/stastistics', [StatisticsController::class, 'index']);
     Route::apiResource('users', UserController::class);
@@ -73,4 +73,4 @@ Route::middleware(['auth:api'])->group(function () {
         // Route::get('/statistics', [CertificateController::class, 'getStatistics']);
         // Route::get('/health', [CertificateController::class, 'healthCheck']);
     });
-});
+// });
