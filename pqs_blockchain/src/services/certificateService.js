@@ -82,8 +82,7 @@ export class CertificateService {
             }
         } catch (error) {
             if (error instanceof NotFoundError) {
-                const certificateNumber = cert.certificateNumber || cert.id;
-        logger.warn(`Certificate not found with number: ${certificateNumber}`);
+
                 return {
                     status: 'NOT_FOUND',
                     message: 'لا يوجد شهادة بهذا الرقم'
