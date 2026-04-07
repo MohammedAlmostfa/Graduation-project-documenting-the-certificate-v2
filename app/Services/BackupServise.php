@@ -41,7 +41,7 @@ class BackupServise extends Service
     public function StoreBackups()
     {
         // Send POST request to create a backup
-        $response = $this->api->makeRequest('post', '/admin/backup');
+        $response = $this->api->makeRequest('get', '/admin/backup');
 
         // Format and return response
         return $this->formatResponse($response, $response['data'] ?? null);

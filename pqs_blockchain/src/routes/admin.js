@@ -111,7 +111,7 @@ router.get('/stats',
  * Requires: Admin role
  * Returns: Array of all backup files with timestamps
  */
-router.get('/backup/list',
+router.get('/backup',
     adminController.listBackups
 );
 
