@@ -42,8 +42,8 @@ process.on('uncaughtException', async (error) => {
 const startServer = async () => {
   await initServices();
   app.listen(port, async () => {
-    logger.info(`🔄 الخادم يعمل على http://localhost:${port}`);
-    logger.info('📊 نظام الشهادات الجامعية جاهز للاستخدام');
+logger.info(`Server started on http://localhost:${port}`);
+logger.info('University Certificates System initialized successfully');
 
 
   });

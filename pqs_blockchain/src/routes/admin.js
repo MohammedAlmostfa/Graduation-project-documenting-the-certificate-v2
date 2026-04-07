@@ -142,7 +142,7 @@ router.post('/backup/restore',
  * Request body: { backupFilename: "backup-YYYY-MM-DD-HH-mm-ss.json" }
  * Returns: Deletion result
  */
-router.post('/backup/delete',
+router.delete('/backup',
 
     adminController.deleteBackup
 );

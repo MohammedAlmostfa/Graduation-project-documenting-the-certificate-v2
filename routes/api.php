@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CertificateSystem\BlockchainController;
 use App\Http\Controllers\CertificateSystem\CertificateController;
@@ -30,12 +30,19 @@ Route::post('certificates/{certificate_id}}/validate', [CertificateController::c
 
 Route::middleware(['auth:api'])->group(function () {
 
-Route::get('/stastistics', [StatisticsController::class, 'index']);
+    Route::get('/stastistics', [StatisticsController::class, 'index']);
     Route::apiResource('users', UserController::class);
 
     Route::post('blockchain/mine', [BlockchainController::class, 'mineTransactions']);
 
+    Route::prefix('backups')->group(function () {
 
+
+        Route::post('/', [BackupController::class, 'Store']);
+        Route::get('/', [BackupController::class, 'index']);
+        Route::post('/restore', [BackupController::class, 'Restore']);
+        Route::delete('/', [BackupController::class, 'delete']);
+    });
     Route::prefix('certificates')->group(function () {
 
 

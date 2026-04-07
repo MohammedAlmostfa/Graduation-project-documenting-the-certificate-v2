@@ -37,9 +37,9 @@ abstract class Service
         return [
             'message' => $response['message'] ?? '',
             'status'  => $response['status'] ?? 500,
-         'data' => $response['data'] ?? $data ??null,
-
+            'data' => $response['data'] ?? $data ?? null,
             'error'   => $response['error'] ?? null,
+             'errors'   => $response['errors'] ?? null,
         ];
     }
 }

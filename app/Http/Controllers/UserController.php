@@ -43,7 +43,7 @@ class UserController extends Controller
      */
     public function index()
     {
-        $result = $this->userService->getAllUsers();
+        $result = $this->userService->GetAllUsers();
 
         return $result['status'] === 200
             ? self::success($result['data'], $result['message'], $result['status'])

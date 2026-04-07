@@ -30,8 +30,8 @@ class UserService extends Service
             'username'   => $data['name'],
             'email'      => $data['email'],
             'role'       => $data['role'],
-            'department' => $departmentName,
-            'password'   => $data['password'],
+            'department' => $data['department'],
+            'password'   => $data['password']
         ]);
 
 
