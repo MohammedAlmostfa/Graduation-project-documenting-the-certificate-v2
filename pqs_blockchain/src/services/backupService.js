@@ -294,7 +294,8 @@ export class BackupService {
                 await connection.query('DELETE FROM certificate_signatures');
                 await connection.query('DELETE FROM certificates');
                 await connection.query('DELETE FROM students');
-                await connection.query('DELETE FROM blockchain');
+                await connection.query('TRUNCATE TABLE blockchain');
+                await connection.query('ALTER TABLE blockchain AUTO_INCREMENT = 0');
                 await connection.query('DELETE FROM users');
 
                 // 2. Restore users first (required for admin/auth state)
