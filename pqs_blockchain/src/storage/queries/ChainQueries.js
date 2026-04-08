@@ -427,7 +427,7 @@ export class ChainQueries {
 		const [rows] = await conn.query('SELECT * FROM blockchain ORDER BY id');
 		// CRITICAL: Convert types from database strings to correct types
 		const blocks = rows.map(r => ({
-			id: r.id,
+			id: Number(r.id),                      // string -> number (represents block index)
 			timestamp: r.timestamp,
 			previousHash: String(r.previous_hash), // ensure string
 			hash: r.hash,
