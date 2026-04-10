@@ -14,6 +14,9 @@ import {
 import { asyncWrapper } from '../utils/asyncWrapper.js';
 import { RestoreBackupRequest } from '../requests/RestoreBackupRequest.js';
 import { telegramService } from '../services/telegram.service.js';
+import { MerkleTree } from '../utils/merkleTree.js';
+
+const escapeTelegramMarkdown = (value) => String(value ?? '').replace(/([_*\[`])/g, '\\$1');
 /**
  * Admin Controller
  *
@@ -282,6 +285,89 @@ export const adminController = {
 
                 throw error;
             }
+    }),
+
+    /**
+     * Verify certificates table integrity by rebuilding Merkle roots from current DB data.
+     * Compares computed roots with stored roots in blockchain table.
+     * Sends Telegram alert when any mismatch is detected.
+     */
+    verifyCertificatesIntegrity: asyncWrapper(async (_req, res) => {
+            const checkedAt = new Date().toISOString();
+            const blocks = await blockchainService.repo.getAllBlocks();
+            const issues = [];
+            const details = [];
+
+            for (const block of blocks || []) {
+                const certificateIds = block.certificateIds || [];
+                const certHashes = [];
+
+                for (const certId of certificateIds) {
+                    const cert = await certificateService.repo.getCertificate(certId);
+                    if (!cert || !cert.certificateHash) {
+                        issues.push({
+                            code: 'CERTIFICATE_HASH_MISSING',
+                            blockId: block.id,
+                            certificateId: certId
+                        });
+                        continue;
+                    }
+                    certHashes.push(cert.certificateHash);
+                }
+
+                const tree = new MerkleTree(certHashes, true);
+                const computedMerkleRoot = tree.getRoot();
+                const storedMerkleRoot = String(block.merkleRoot || '');
+                const isEmptyBlock = certificateIds.length === 0;
+                const rootsMatch = isEmptyBlock
+                    ? (storedMerkleRoot === '' || storedMerkleRoot === computedMerkleRoot)
+                    : storedMerkleRoot === computedMerkleRoot;
+
+                details.push({
+                    blockId: block.id,
+                    certificatesCount: certificateIds.length,
+                    storedMerkleRoot,
+                    computedMerkleRoot,
+                    rootsMatch
+                });
+
+                if (!rootsMatch) {
+                    issues.push({
+                        code: 'BLOCK_MERKLE_ROOT_MISMATCH',
+                        blockId: block.id,
+                        storedMerkleRoot,
+                        computedMerkleRoot
+                    });
+                }
+            }
+
+            const result = {
+                valid: issues.length === 0,
+                checkedAt,
+                summary: {
+                    blocksChecked: (blocks || []).length,
+                    issuesCount: issues.length
+                },
+                details,
+                issues
+            };
+
+            if (!result.valid) {
+                const topIssues = issues
+                    .slice(0, 5)
+                    .map((issue, idx) => `${idx + 1}. ${escapeTelegramMarkdown(issue.code)}${issue.blockId !== undefined ? ` | block=${escapeTelegramMarkdown(issue.blockId)}` : ''}${issue.certificateId ? ` | cert=${escapeTelegramMarkdown(issue.certificateId)}` : ''}`)
+                    .join('\n');
+
+                telegramService.warning(
+                    `Database integrity check FAILED.\n\n` +
+                    `Timestamp: ${escapeTelegramMarkdown(checkedAt)}\n` +
+                    `Alert: Certificates table appears altered (Merkle mismatch detected).\n` +
+                    `Recommendation: Restore the last known good backup immediately.\n\n` +
+                    `${topIssues ? `Top issues:\n${topIssues}` : ''}`
+                ).catch(err => logger.error('Telegram warning message failed', err));
+            }
+
+            res.json(ApiResponse.success('Certificates integrity verification result', result));
     })
 };
 

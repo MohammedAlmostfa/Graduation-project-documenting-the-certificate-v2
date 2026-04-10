@@ -171,5 +171,13 @@ router.post('/backup',
     adminController.backupData);
 
 
+/**
+ * Verify certificates table integrity using Merkle root comparison.
+ * GET /admin/verify
+ */
+router.get('/verify',
+    adminController.verifyCertificatesIntegrity
+);
+
 export default router;
 

@@ -2,6 +2,7 @@ import express from 'express';
 import certificateRoutes from './routes/certificates.js';
 import blockchainRoutes from './routes/blockchain.js';
 import adminRoutes from './routes/admin.js';
+import { adminController } from './controllers/adminController.js';
 import { logger } from './utils/logger.js';
 import { ApiResponse } from './utils/apiResponse.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -33,11 +34,13 @@ const registerRoutes = (app) => {
   app.use('/api/certificates', certificateRoutes);
   app.use('/api/blockchain', blockchainRoutes);
   app.use('/api/admin', adminRoutes);
+  app.get('/verify', adminController.verifyCertificatesIntegrity);
 
   app.get('/', (_req, res) => {
     res.json(ApiResponse.success('نظام الشهادات الجامعية الموزع', {
       version: process.env.npm_package_version || '1.0.0',
       endpoints: {
+        verify: '/verify',
         certificates: '/api/certificates',
         blockchain: '/api/blockchain',
         admin: '/api/admin'
