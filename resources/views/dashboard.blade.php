@@ -80,9 +80,9 @@
 
     <!-- Footer -->
     <div class="footer">
-        <p class="footer-text">© 2025 جامعة حمص - جميع الحقوق محفوظة</p>
+        <p class="footer-text">© 2026 جامعة حمص - جميع الحقوق محفوظة</p>
         <p class="footer-text" style="margin-top: 8px; font-size: 12px;">
-            نظام البلوكتشين للشهادات الجامعية | Blockchain Technology
+            نظام البلوكتشين للشهادات الجامعية
         </p>
     </div>
 

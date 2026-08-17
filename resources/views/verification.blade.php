@@ -67,9 +67,9 @@
 
     <!-- Footer -->
     <div class="footer">
-        <p class="footer-text">© 2024 جامعة حمص - جميع الحقوق محفوظة</p>
+        <p class="footer-text">© 2026 جامعة حمص - جميع الحقوق محفوظة</p>
         <p class="footer-text" style="margin-top: 8px; font-size: 12px;">
-            نظام التحقق الإلكتروني من الشهادات | Blockchain Technology
+            نظام التحقق الإلكتروني من الشهادات
         </p>
     </div>
 

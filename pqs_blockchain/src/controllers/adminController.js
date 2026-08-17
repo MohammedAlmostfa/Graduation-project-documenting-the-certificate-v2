@@ -359,11 +359,11 @@ export const adminController = {
                     .join('\n');
 
                 telegramService.warning(
-                    `Database integrity check FAILED.\n\n` +
-                    `Timestamp: ${escapeTelegramMarkdown(checkedAt)}\n` +
-                    `Alert: Certificates table appears altered (Merkle mismatch detected).\n` +
-                    `Recommendation: Restore the last known good backup immediately.\n\n` +
-                    `${topIssues ? `Top issues:\n${topIssues}` : ''}`
+                    `فشل فحص سلامة قاعدة البيانات.\n\n` +
+                    `الطابع الزمني: ${escapeTelegramMarkdown(checkedAt)}\n` +
+                    `تنبيه: يبدو أن جدول الشهادات قد تم تغييره (تم اكتشاف عدم تطابق Merkle).\n` +
+                    `التوصية: استعيد آخر نسخة احتياطية معروفة فوراً.\n\n` +
+                    `${topIssues ? `أهم المشاكل:\n${topIssues}` : ''}`
                 ).catch(err => logger.error('Telegram warning message failed', err));
             }
 
