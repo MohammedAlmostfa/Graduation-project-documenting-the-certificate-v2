@@ -1,7 +1,8 @@
-document.getElementById('verifyForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const certNumber = document.getElementById('certNumber').value.trim();
+// ============================================================
+// verifyCertificate — الدالة الأساسية للتحقق، صارت قابلة لإعادة الاستخدام
+// (تُستدعى من الفورم يدويًا، أو تلقائيًا لما تجي من رابط QR)
+// ============================================================
+async function verifyCertificate(certNumber) {
     const loadingState = document.getElementById('loadingState');
     const resultCard = document.getElementById('resultCard');
 
@@ -59,6 +60,33 @@ document.getElementById('verifyForm').addEventListener('submit', async (e) => {
             </div>
         `;
         resultCard.classList.add('show');
+    }
+}
+
+// ============================================================
+// ربط الفورم بالتحقق اليدوي (زر "تحقق من الشهادة")
+// ============================================================
+document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const certNumber = document.getElementById('certNumber').value.trim();
+    await verifyCertificate(certNumber);
+});
+
+// ============================================================
+// ✅ التحقق التلقائي عند الوصول من رابط QR الشهادة
+// الرابط بيكون فيه ?cert=CERT-2024-A1B2C3D4
+// نعبّي الحقل تلقائيًا ونشغّل التحقق فورًا بدون أي تدخل من المستخدم
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const certFromQR = params.get('cert');
+
+    if (certFromQR) {
+        const input = document.getElementById('certNumber');
+        if (input) {
+            input.value = certFromQR;
+        }
+        verifyCertificate(certFromQR);
     }
 });
 
@@ -210,20 +238,7 @@ function showCertificate() {
     const certNumber = sessionStorage.getItem('certificateNumber');
 
     if (certData) {
-        // ✅ الخيار 1: فتح صفحة جديدة مع البيانات
-        // يمكن استقبال البيانات من sessionStorage في الصفحة الأخرى
         window.location.href = 'http://127.0.0.1:8000/certificate';
-
-        // ✅ الخيار 2 (بديل): إذا كنت تريد URL مع البيانات كـ query string
-        // تفكيك البيانات وإضافتها للـ URL:
-        // const data = JSON.parse(certData);
-        // const params = new URLSearchParams({
-        //     certNumber: certNumber,
-        //     studentName: data.certificate.student.studentName,
-        //     studentId: data.certificate.student.studentId,
-        //     // أضف ما تحتاج
-        // });
-        // window.location.href = `http://127.0.0.1:8000/certificate?${params.toString()}`;
     } else {
         alert('لم يتم العثور على بيانات الشهادة');
     }
@@ -291,4 +306,3 @@ function getCertificateData() {
     }
     return null;
 }
-

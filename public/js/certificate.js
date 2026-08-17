@@ -1,6 +1,11 @@
 let certificateData = null;
 
 // ============================================================
+// ⚙️ رابط صفحة التحقق — عدّل هذا ليطابق مسار صفحة التحقق الفعلي عندك
+// ============================================================
+const VERIFY_PAGE_URL = 'http://127.0.0.1:8000/certificate/verify';
+
+// ============================================================
 // عند تحميل الصفحة
 // ============================================================
 window.addEventListener('DOMContentLoaded', function() {
@@ -121,21 +126,12 @@ function populateCertificateDisplay() {
         document.getElementById('specializationDisplay').textContent =
             certificateData.specialization;
 
-        // document.getElementById('majorDisplay2').textContent =
-        //     certificateData.department;
-
         // البيانات الشخصية
         document.getElementById('nationalIdDisplay').textContent =
             certificateData.nationalId;
 
         document.getElementById('birthYearDisplay').textContent =
             certificateData.birthYear;
-
-        // document.getElementById('birthPlaceDisplay').textContent =
-        //     certificateData.birthPlace;
-
-        // document.getElementById('birthDateDisplay').textContent =
-        //     formatDate(certificateData.dateOfBirth);
 
         // بيانات الأداء
         document.getElementById('honorsDisplay').textContent =
@@ -171,6 +167,8 @@ function generateCertificateTitle(certificateType, major) {
 
 // ============================================================
 // QR Code
+// ✅ الآن يشير مباشرة إلى صفحة التحقق مع رقم الشهادة كـ query param
+//    بحيث تفتح صفحة التحقق، تعبّي الرقم تلقائيًا، وتطلع النتيجة فورًا
 // ============================================================
 function generateQRCode() {
     if (!certificateData || !certificateData.certificateNumber) {
@@ -180,7 +178,7 @@ function generateQRCode() {
 
     try {
         const certId = certificateData.certificateNumber;
-        const verifyUrl = `${window.location.origin}/certificate/verify/${certId}`;
+        const verifyUrl = `${VERIFY_PAGE_URL}?cert=${encodeURIComponent(certId)}`;
 
         const qrContainer = document.getElementById('qrcode');
         qrContainer.innerHTML = '';
@@ -194,7 +192,7 @@ function generateQRCode() {
             correctLevel: QRCode.CorrectLevel.H
         });
 
-        console.log('✅ تم توليد رمز QR بنجاح');
+        console.log('✅ تم توليد رمز QR بنجاح باتجاه:', verifyUrl);
 
     } catch (error) {
         console.error('❌ خطأ في توليد رمز QR:', error);
