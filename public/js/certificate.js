@@ -21,6 +21,14 @@ window.addEventListener('DOMContentLoaded', function() {
             certificateData = extractCertificateData(data);
             console.log('📋 البيانات المحولة:', certificateData);
 
+            // ✅ تحذير بالكونسول عن أي حقل أساسي وصل فاضي — يسهّل تحديد
+            // اسم الحقل الصح باستجابة الـ API لو صار نفس المشكل بحقل تاني
+            const requiredFields = ['studentName', 'nationalId', 'birthYear', 'major', 'faculty', 'department', 'specialization', 'graduationDate', 'graduationCycle'];
+            const missingFields = requiredFields.filter(f => !certificateData[f]);
+            if (missingFields.length > 0) {
+                console.warn('⚠️ الحقول التالية وصلت فاضية من الـ API، تحقق من اسم الحقل بالباك-إند:', missingFields);
+            }
+
             document.getElementById('certificateContainer').style.display = 'block';
 
             populateCertificateDisplay();
@@ -46,7 +54,9 @@ function extractCertificateData(data) {
         // البيانات الأساسية
         studentName: student.studentName || student.name || 'غير متوفر',
         studentId: student.studentId || student.id || '',
-        nationalId: student.nationalId || '',
+        // ✅ تدعم كل الأسماء المحتملة لنفس الحقل من الـ API (camelCase أو snake_case)
+        nationalId: student.nationalId || student.national_id || student.nationalID
+            || student.idNumber || student.id_number || student.nationalNumber || '',
 
         // البيانات الشخصية
         dateOfBirth: student.dateOfBirth || '',
@@ -230,7 +240,11 @@ function downloadPDF() {
             backgroundColor: null,
             width: 1200,
             height: 700,
-            logging: false
+            logging: false,
+            // ✅ يخلي المتصفح نفسه يرسم النص (بدل محرك html2canvas الداخلي)
+            // هاد أدق بكثير لتشكيل الحروف العربية المتصلة، وبيشكّل طبقة حماية
+            // إضافية فوق إزالة letter-spacing بملف الـ CSS
+            foreignObjectRendering: true
         }).then(canvas => {
             try {
                 const { jsPDF } = window.jspdf;
